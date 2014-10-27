@@ -1,0 +1,23 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby ts=2 sw=2 expandtab:
+
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  box = "chef/centos-6.5"
+
+  config.vm.define :centos65 do |centos65|
+    centos65.vm.box = box
+    centos65.vm.network "private_network", ip: "10.0.0.2"
+    centos65.vm.hostname = "centos65"
+      ## load the salt folder
+    centos65.vm.synced_folder "../salt/roots/", "/srv/"
+    # provision
+    centos65.vm.provision :salt do |salt|
+      salt.minion_config = "../salt/minion"
+      salt.run_highstate = true
+    end
+  end
+  
+end
+
