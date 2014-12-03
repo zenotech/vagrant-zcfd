@@ -6,7 +6,16 @@ centos:
             - gcc-c++
             - make
             - cmake28
-            
+            - makedepdend
+            - flex
+            - bison
+            - libX11-devel
+            - rpm-build
+            - libtool
+            - zlib-devel
+            - kernel-devel
+            - gcc-gfortran
+
 /etc/motd:
     file.append:
         - text:

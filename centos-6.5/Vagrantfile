@@ -10,7 +10,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     centos65.vm.box = box
     centos65.vm.network "private_network", ip: "10.0.0.2"
     #centos65.vm.network :forwarded_port, guest: 22, host: 2201, id: "ssh", auto_correct: true
-    centos65.vm.hostname = "centos65"
+    centos65.vm.hostname = "zcfd-centos65"
 
     config.vm.provider "virtualbox" do |v|  
       v.memory = 512
