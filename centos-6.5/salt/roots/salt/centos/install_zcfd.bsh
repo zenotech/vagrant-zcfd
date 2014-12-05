@@ -14,12 +14,20 @@ if [ ! -f "$ZCFD" ]; then
 	mkdir BUILD
 	pushd BUILD
 
-	# Build OFED
+	# Build and install OFED
 	wget http://downloads.openfabrics.org/downloads/OFED/ofed-3.12/OFED-3.12.tgz
 	tar xvf OFED-3.12.tgz
 	pushd OFED-3.12
     sudo ./install.pl -q --basic --without-compat-rdma
     popd
+
+	# Install latest nvidia driver
+	wget http://packages.zenotech.com/NVIDIA-Linux-x86_64-340.58.run
+	sudo sh NVIDIA-Linux-x86_64-340.58.run --accept-license  --silent --no-kernel-module --update
+
+	# Install cuda
+    wget http://developer.download.nvidia.com/compute/cuda/5_5/rel/installers/cuda_5.5.22_linux_64.run
+    sudo sh cuda_5.5.22_linux_64.run -silent -toolkit
 
 	# Clone the repo
 	git clone https://github.com/zenotech/zCFDSuperbuild.git
@@ -43,7 +51,7 @@ if [ ! -f "$ZCFD" ]; then
 	export BZIP2_INCLUDE=`pwd`/install/include
 	export BZIP2_LIBPATH=`pwd`/install/lib
 
-	PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release -DPYTHON_EXECUTABLE:STRING=${PREFIX}/bin/python -DVTK_OPENGL_HAS_OSMESA:BOOL=ON -DVTK_XDMF_USE_MPI:BOOL=ON -DVTK_USE_SYSTEM_HDF5:BOOL=ON -DXDMF_BUILD_MPI:BOOL=ON -DOSMESA_INCLUDE_DIR:STRING=${PREFIX}/include -DOSMESA_LIBRARY:STRING=${PREFIX}/lib/libOSMesa.so -DOPENGL_INCLUDE_DIR:STRING=${PREFIX}/include -DOPENGL_gl_LIBRARY:STRING="" -DOPENGL_glu_LIBRARY:STRING=${PREFIX}/lib/libGLU.so -DOPENGL_xmesa_INCLUDE_DIR:STRING="" -DVTK_USE_X:BOOL=OFF"
+	PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
 	cmake28 -DCMAKE_BUILD_TYPE:STRING:=Release \
 	      -DENABLE_boost:BOOL=ON \
@@ -55,8 +63,7 @@ if [ ! -f "$ZCFD" ]; then
 	      -DENABLE_paraviewsdk:BOOL=ON\
 	      -DENABLE_paraview:BOOL=ON \
 	      -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
-	      -DENABLE_parmetis:BOOL=ON \
-	      -DENABLE_threadworker:BOOL=ON \
+	      -DENABLE_zcfd:BOOL=ON \
 	      ../zCFDSuperbuild
 
 	make -j2

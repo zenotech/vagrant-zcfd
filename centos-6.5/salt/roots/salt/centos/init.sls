@@ -6,7 +6,7 @@ centos:
             - gcc-c++
             - make
             - cmake28
-            - makedepdend
+            - imake
             - flex
             - bison
             - libX11-devel
