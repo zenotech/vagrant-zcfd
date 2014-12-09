@@ -11,23 +11,29 @@ if [ ! -f "$ZCFD" ]; then
 
 	echo 'Installing zCFD'
 
+	pushd ~
 	mkdir BUILD
 	pushd BUILD
 
-	# Build and install OFED
-	wget http://downloads.openfabrics.org/downloads/OFED/ofed-3.12/OFED-3.12.tgz
-	tar xvf OFED-3.12.tgz
-	pushd OFED-3.12
-    sudo ./install.pl -q --basic --without-compat-rdma
-    popd
+	if [ ! -f "OFED-3.12.tgz" ]; then
 
-	# Install latest nvidia driver
-	wget http://packages.zenotech.com/NVIDIA-Linux-x86_64-340.58.run
-	sudo sh NVIDIA-Linux-x86_64-340.58.run --accept-license  --silent --no-kernel-module --update
+		# Build and install OFED
+		wget http://downloads.openfabrics.org/downloads/OFED/ofed-3.12/OFED-3.12.tgz
+		tar xvf OFED-3.12.tgz
+		pushd OFED-3.12
+	    sudo ./install.pl -q --basic --without-compat-rdma
+	    popd
+	fi
 
-	# Install cuda
-    wget http://developer.download.nvidia.com/compute/cuda/5_5/rel/installers/cuda_5.5.22_linux_64.run
-    sudo sh cuda_5.5.22_linux_64.run -silent -toolkit
+	if [ ! -f "NVIDIA-Linux-x86_64-340.58.run" ]; then
+		# Install latest nvidia driver
+		wget http://packages.zenotech.com/NVIDIA-Linux-x86_64-340.58.run
+		sudo sh NVIDIA-Linux-x86_64-340.58.run --accept-license  --silent --no-kernel-module --update
+
+		# Install cuda
+	    wget http://developer.download.nvidia.com/compute/cuda/5_5/rel/installers/cuda_5.5.22_linux_64.run
+	    sudo sh cuda_5.5.22_linux_64.run -silent -toolkit
+	fi
 
 	# Clone the repo
 	git clone https://github.com/zenotech/zCFDSuperbuild.git
@@ -69,7 +75,7 @@ if [ ! -f "$ZCFD" ]; then
 	make -j1
 
 	# Package
-	cpack -G TGZ
+	cpack -G TGZ --debug --verbose
 
 	# Install
 	pushd /opt
