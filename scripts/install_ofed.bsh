@@ -1,0 +1,9 @@
+#!/bin/bash
+
+
+# Build and install OFED
+wget http://downloads.openfabrics.org/downloads/OFED/ofed-3.12/OFED-3.12.tgz
+tar xvf OFED-3.12.tgz
+pushd OFED-3.12
+sudo ./install.pl -q --basic --without-compat-rdma
+popd

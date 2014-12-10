@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Install latest nvidia driver
+wget http://packages.zenotech.com/NVIDIA-Linux-x86_64-340.58.run
+sudo sh NVIDIA-Linux-x86_64-340.58.run --accept-license  --silent --no-kernel-module --update
+
+# Install cuda
+wget http://developer.download.nvidia.com/compute/cuda/5_5/rel/installers/cuda_5.5.22_linux_64.run
+sudo sh cuda_5.5.22_linux_64.run -silent -toolkit
+
