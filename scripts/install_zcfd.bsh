@@ -6,7 +6,7 @@ mkdir BUILD
 pushd BUILD
 
 # Clone the repo
-if [ ! -d "zCFDSuperbuild"]; then
+if [ ! -d "zCFDSuperbuild" ]; then
 	git clone https://github.com/zenotech/zCFDSuperbuild.git
 else
 	pushd zCFDSuperbuild
@@ -18,22 +18,6 @@ fi
 pushd zCFDSuperbuild
 git checkout master
 popd
-
-# Build directory
-mkdir zCFD_build
-
-# Build
-pushd zCFD_build
-rm CMakeCache.txt
-
-PREFIX=`pwd`/install
-export PATH=$PREFIX/bin:$PATH
-export LD_LIBRARY_PATH=$PREFIX/lib
-export BOOST_ROOT=$PREFIX
-export BZIP2_INCLUDE=`pwd`/install/include
-export BZIP2_LIBPATH=`pwd`/install/lib
-
-PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
 ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
 
@@ -52,7 +36,28 @@ if [ -f "$INTEL_COMPILER" ]; then
 	ZCFD_PACKAGE_NAME="zCFD-icc"
 fi
 
-cmake28 -DCMAKE_BUILD_TYPE:STRING:=Release \
+# Build directory
+mkdir ${ZCFD_PACKAGE_NAME}_build
+
+# Build
+pushd ${ZCFD_PACKAGE_NAME}_build
+rm CMakeCache.txt
+
+PREFIX=`pwd`/install
+export PATH=$PREFIX/bin:$PATH
+export LD_LIBRARY_PATH=$PREFIX/lib
+export BOOST_ROOT=$PREFIX
+export BZIP2_INCLUDE=`pwd`/install/include
+export BZIP2_LIBPATH=`pwd`/install/lib
+
+PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+
+CMAKE_EXE=`which cmake`
+if [ !-f "$CMAKE_EXE" ]; then
+	CMAKE_EXE=cmake28
+fi
+
+$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
