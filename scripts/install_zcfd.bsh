@@ -6,7 +6,13 @@ mkdir BUILD
 pushd BUILD
 
 # Clone the repo
-git clone https://github.com/zenotech/zCFDSuperbuild.git
+if [ ! -d "zCFDSuperbuild"]; then
+	git clone https://github.com/zenotech/zCFDSuperbuild.git
+else
+	pushd zCFDSuperbuild
+	git pull 
+	popd
+fi
 
 # Checkout branch
 pushd zCFDSuperbuild
@@ -29,6 +35,23 @@ export BZIP2_LIBPATH=`pwd`/install/lib
 
 PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
+ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
+
+ZCFD_PACKAGE_NAME="zCFD"
+
+# Check for presence of CUDA compiler
+CUDA_COMPILER=`which nvcc`
+if [ -f "$CUDA_COMPILER" ]; then
+	ZCFD_PACKAGE_NAME="zCFD-cuda"
+fi
+
+# Check for presence of Intel compiler
+INTEL_COMPILER=`which icc`
+if [ -f "$INTEL_COMPILER" ]; then
+	ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=icc;-DCMAKE_CXX_COMPILER=icpc"
+	ZCFD_PACKAGE_NAME="zCFD-icc"
+fi
+
 cmake28 -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
@@ -40,9 +63,10 @@ cmake28 -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_paraview:BOOL=ON \
       -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
       -DENABLE_zcfd:BOOL=ON \
+      -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ../zCFDSuperbuild
 
 make -j1
 
 # Package
-cpack -G TGZ --debug --verbose
+cpack -G TGZ --debug --verbose -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME}
