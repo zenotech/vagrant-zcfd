@@ -74,6 +74,20 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
 
 make -j1
 
+# Install setuptools
+wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
+# Install pip
+wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
+# Install yolk
+pip install yolk
+
+# Install requirements
+install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
+# If CUDA present install pycuda
+if [ -f "$CUDA_COMPILER" ]; then
+	install/bin/pip install pycuda==2014.1
+fi
+
 CPACK_EXE=`which cpack`
 if [ ! -f "$CPACK_EXE" ]; then
 	CPACK_EXE=cpack28
