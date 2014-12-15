@@ -79,7 +79,7 @@ wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install
 # Install pip
 wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
 # Install yolk
-pip install yolk
+install/bin/pip install yolk
 
 # Install requirements
 install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
