@@ -19,8 +19,6 @@ pushd zCFDSuperbuild
 git checkout master
 popd
 
-Z_CC=gcc
-Z_CXX=g++
 ZCFD_EXTRA_ARGS=""
 
 ZCFD_PACKAGE_NAME="zCFD"
@@ -34,9 +32,8 @@ fi
 # Check for presence of Intel compiler
 INTEL_COMPILER=`which icc`
 if [ -f "$INTEL_COMPILER" ]; then
-	Z_CC=icc
-	Z_CXX=icpc
 	ZCFD_PACKAGE_NAME="zCFD-icc"
+	ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON"
 fi
 
 # Build directory
@@ -60,7 +57,7 @@ if [ ! -f "$CMAKE_EXE" ]; then
 	CMAKE_EXE=cmake28
 fi
 
-CC=$Z_CC CXX=$Z_CXX $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
+$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
@@ -70,6 +67,7 @@ CC=$Z_CC CXX=$Z_CXX $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_paraviewsdk:BOOL=ON\
       -DENABLE_paraview:BOOL=ON \
       -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
+      -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ../zCFDSuperbuild
@@ -82,4 +80,4 @@ if [ ! -f "$CPACK_EXE" ]; then
 fi
 
 # Package
-$CPACK_EXE -G TGZ --debug --verbose -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME}
+$CPACK_EXE -G TGZ # --debug --verbose
