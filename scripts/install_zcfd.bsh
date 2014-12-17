@@ -34,6 +34,13 @@ INTEL_COMPILER=`which icc`
 if [ -f "$INTEL_COMPILER" ]; then
 	ZCFD_PACKAGE_NAME="zCFD-icc"
 	ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON"
+
+    # Should we build phi support
+    MIC_INFO=`which micinfo`
+    if [ -f "$MIC_INFO" ]; then
+        ZCFD_PACKAGE_NAME="zCFD-icc-phi"
+        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON"
+    fi
 fi
 
 # Build directory
@@ -87,6 +94,13 @@ install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
 if [ -f "$CUDA_COMPILER" ]; then
 	install/bin/pip install pycuda==2014.1
 fi
+
+# Always install the intel compiler redistributable libraries
+wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+tar xvf l_ccompxe_2015.0.090_redist.tgz
+pushd l_ccompxe_2015.0.090_redist
+./install.sh --eula --install-path ../install/intel
+popd
 
 CPACK_EXE=`which cpack`
 if [ ! -f "$CPACK_EXE" ]; then

@@ -15,6 +15,8 @@ centos:
             - zlib-devel
             - kernel-devel
             - gcc-gfortran
+            - openssl-devel
+            - numactl
 
 /etc/motd:
     file.append:
@@ -33,13 +35,13 @@ centos:
 #        - unless: which cmake
 
 # Watch for changes to a git repo and rebuild the project on updates
-zCFDSuperBuild:
-    git.latest:
-        - name: https://github.com/zenotech/zCFDSuperBuild.git
-        - target: /opt/zCFDSuperBuild
-        - rev: master
-    cmd.wait:
-        - name: mkdir /opt/zCFDSuperBuild_build
-        - cwd: /opt
-        - watch:
-            - git: zCFDSuperBuild
+#zCFDSuperBuild:
+#    git.latest:
+#        - name: https://github.com/zenotech/zCFDSuperBuild.git
+#        - target: /opt/zCFDSuperBuild
+#        - rev: master
+#    cmd.wait:
+#        - name: mkdir /opt/zCFDSuperBuild_build
+#        - cwd: /opt
+#        - watch:
+#            - git: zCFDSuperBuild
