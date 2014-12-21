@@ -93,6 +93,8 @@ install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
 # If CUDA present install pycuda
 if [ -f "$CUDA_COMPILER" ]; then
 	install/bin/pip install pycuda==2014.1
+    #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
+    cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
 
 # Always install the intel compiler redistributable libraries
@@ -109,3 +111,10 @@ fi
 
 # Package
 $CPACK_EXE -G TGZ # --debug --verbose
+
+popd 
+popd
+cp BUILD/${ZCFD_PACKAGE_NAME}_build/${ZCFD_PACKAGE_NAME}*.tar.gz .
+
+echo 'Finished Build zCFD'
+
