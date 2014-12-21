@@ -16,7 +16,7 @@ fi
 
 # Checkout branch
 pushd zCFDSuperbuild
-git checkout master
+git checkout develop
 popd
 
 ZCFD_EXTRA_ARGS=""
