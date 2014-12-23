@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ $# -eq 1]; then
+  ZTARGET=$1
+fi
+
 # Check version of cmake
 CMAKE_VER=`cmake --version | grep 2.8`
 if [ ! -n "$CMAKE_VER" ]; then
@@ -26,28 +30,51 @@ pushd zCFDSuperbuild
 git checkout release-0.1.0
 popd
 
-ZCFD_EXTRA_ARGS=""
+ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
+if [ -n "$ZTARGET" ]; then
+  echo $ZTARGET
+  if [ "$ZTARGET" == "avx" ]; then
+    CPU_FLAG='avx'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+  else
+    CPU_FLAG='sse'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  fi
+else
+  CPU_FLAG=`cat /proc/cpuinfo | grep flags | grep -q avx && echo $?`
+  if [ "$CPU_FLAG" -eq 0 ] ; then
+    # AVX
+    CPU_FLAG='avx'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+  else
+    # SSE
+    CPU_FLAG='sse'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  fi  
+fi
 
-ZCFD_PACKAGE_NAME="zCFD"
+ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG"
 
 # Check for presence of CUDA compiler
 CUDA_COMPILER=`type -p nvcc`
 if [ -f "$CUDA_COMPILER" ]; then
-	ZCFD_PACKAGE_NAME="zCFD-cuda"
+	ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
 fi
 
 # Check for presence of Intel compiler
 INTEL_COMPILER=`type -p icc`
+INTEL_VERSION="15.0.0"
 if [ -f "$INTEL_COMPILER" ]; then
-	ZCFD_PACKAGE_NAME="zCFD-icc"
-	ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON"
+	 ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+	 ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
     # Should we build phi support
     MIC_INFO=`type -p micinfo`
     if [ -f "$MIC_INFO" ]; then
-        ZCFD_PACKAGE_NAME="zCFD-icc-phi"
-        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON"
+        ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
     fi
+    INTEL_VERSION=`icc -dumpversion`
 fi
 
 # Terminate script on first error
@@ -103,8 +130,8 @@ install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
 # If CUDA present install pycuda
 if [ -f "$CUDA_COMPILER" ]; then
 	install/bin/pip install pycuda==2014.1
-    #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
-    cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
+  #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
+  cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
 
 # Need to fix up scripts in bin that use python
@@ -116,11 +143,19 @@ for P in $P_SCRIPTS; do
 done
 
 # Always install the intel compiler redistributable libraries
-wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-tar xvf l_ccompxe_2015.0.090_redist.tgz
-pushd l_ccompxe_2015.0.090_redist
-./install.sh --eula --install-path ../install/intel
-popd
+if [ "$INTEL_VERSION" == "14.0.2" ]; then
+  wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
+  tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+  pushd l_ccompxe_2013_sp1.4.211_redist
+  ./install.sh --eula --install-path ../install/intel
+  popd
+else
+  wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+  tar xvf l_ccompxe_2015.0.090_redist.tgz
+  pushd l_ccompxe_2015.0.090_redist
+  ./install.sh --eula --install-path ../install/intel
+  popd
+fi
 
 CPACK_EXE=`type -p cpack`
 if [ ! -f "$CPACK_EXE" ]; then
