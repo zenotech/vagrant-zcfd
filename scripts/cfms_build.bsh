@@ -1,0 +1,31 @@
+#!/bin/bash -f
+
+# Start multiple screen windows
+screen -mdS zbuild -t default bash
+screen -S zbuild -X screen -t native
+screen -S zbuild -X screen -t icc
+screen -S zbuild -X screen -t cuda
+screen -S zbuild -X screen -t phi
+
+# For native window
+screen -S zbuild -p 1 -X stuff $'eval "$(ssh-agent -s)"\r'
+screen -S zbuild -p 1 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
+screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh\r'
+
+# Sleep so that zCFDSuperBuild checkout does not clash
+sleep 60
+
+# For icc window
+screen -S zbuild -p 2 -X stuff $'eval "$(ssh-agent -s)"\r'
+screen -S zbuild -p 2 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
+screen -S zbuild -p 2 -X stuff $'module load icc\r'
+screen -S zbuild -p 2 -X stuff $'./install_zcfd.bsh\r'
+
+sleep 10
+
+# For cuda window
+screen -S zbuild -p 3 -X stuff $'eval "$(ssh-agent -s)"\r'
+screen -S zbuild -p 3 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
+screen -S zbuild -p 3 -X stuff $'module load cuda/cuda5.5\r'
+screen -S zbuild -p 3 -X stuff $'./install_zcfd.bsh\r'
+
