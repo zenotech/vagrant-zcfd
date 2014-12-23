@@ -2,7 +2,7 @@
 
 echo 'Building zCFD'
 
-mkdir BUILD
+mkdir -p BUILD
 pushd BUILD
 
 # Clone the repo
@@ -96,6 +96,14 @@ if [ -f "$CUDA_COMPILER" ]; then
     #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
     cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
+
+# Need to fix up scripts in bin that use python
+P_SCRIPTS=`grep python install/bin/* | grep '#!' | cut -d : -f 1`
+for P in $P_SCRIPTS; do 
+  echo "Fixing python path in $P" 
+  sed -i.tmp -e "s/\#\!\/.*/\#\!\/usr\/bin\/env python/" $P
+  rm -f "${P}.tmp"  
+done
 
 # Always install the intel compiler redistributable libraries
 wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
