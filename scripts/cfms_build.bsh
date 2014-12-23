@@ -1,7 +1,7 @@
 #!/bin/bash -f
 
 # Start multiple screen windows
-screen -mdS zbuild -t default bash
+screen -AmdS zbuild -t default bash
 screen -S zbuild -X screen -t native
 screen -S zbuild -X screen -t icc
 screen -S zbuild -X screen -t cuda

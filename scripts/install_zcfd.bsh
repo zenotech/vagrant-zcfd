@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Check version of cmake
+CMAKE_VER=`cmake --version | grep 2.8`
+if [ ! -n "$CMAKE_VER" ]; then
+  echo "CMake 2.8 not found"
+  exit 1
+fi
+
 echo 'Building zCFD'
 
 mkdir -p BUILD
@@ -24,27 +31,30 @@ ZCFD_EXTRA_ARGS=""
 ZCFD_PACKAGE_NAME="zCFD"
 
 # Check for presence of CUDA compiler
-CUDA_COMPILER=`which nvcc`
+CUDA_COMPILER=`type -p nvcc`
 if [ -f "$CUDA_COMPILER" ]; then
 	ZCFD_PACKAGE_NAME="zCFD-cuda"
 fi
 
 # Check for presence of Intel compiler
-INTEL_COMPILER=`which icc`
+INTEL_COMPILER=`type -p icc`
 if [ -f "$INTEL_COMPILER" ]; then
 	ZCFD_PACKAGE_NAME="zCFD-icc"
 	ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON"
 
     # Should we build phi support
-    MIC_INFO=`which micinfo`
+    MIC_INFO=`type -p micinfo`
     if [ -f "$MIC_INFO" ]; then
         ZCFD_PACKAGE_NAME="zCFD-icc-phi"
         ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON"
     fi
 fi
 
+# Terminate script on first error
+set -e
+
 # Build directory
-mkdir ${ZCFD_PACKAGE_NAME}_build
+mkdir -p ${ZCFD_PACKAGE_NAME}_build
 
 # Build
 pushd ${ZCFD_PACKAGE_NAME}_build
@@ -59,7 +69,7 @@ export BZIP2_LIBPATH=`pwd`/install/lib
 
 PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
-CMAKE_EXE=`which cmake`
+CMAKE_EXE=`type -p cmake`
 if [ ! -f "$CMAKE_EXE" ]; then
 	CMAKE_EXE=cmake28
 fi
@@ -112,7 +122,7 @@ pushd l_ccompxe_2015.0.090_redist
 ./install.sh --eula --install-path ../install/intel
 popd
 
-CPACK_EXE=`which cpack`
+CPACK_EXE=`type -p cpack`
 if [ ! -f "$CPACK_EXE" ]; then
 	CPACK_EXE=cpack28
 fi
