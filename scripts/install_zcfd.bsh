@@ -17,16 +17,16 @@ mkdir -p BUILD
 pushd BUILD
 
 # Clone the repo
-if [ ! -d "zCFDSuperbuild" ]; then
+if [ ! -d "zCFDSuperBuild" ]; then
 	git clone git@github.com:zenotech/zCFDSuperBuild.git
 else
-	pushd zCFDSuperbuild
+	pushd zCFDSuperBuild
 	git pull 
 	popd
 fi
 
 # Checkout branch
-pushd zCFDSuperbuild
+pushd zCFDSuperBuild
 git checkout release-0.1.0
 popd
 
@@ -65,16 +65,16 @@ fi
 INTEL_COMPILER=`type -p icc`
 INTEL_VERSION="15.0.0"
 if [ -f "$INTEL_COMPILER" ]; then
-	 ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
-	 ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+  ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-    # Should we build phi support
-    MIC_INFO=`type -p micinfo`
-    if [ -f "$MIC_INFO" ]; then
-        ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
-        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
-    fi
-    INTEL_VERSION=`icc -dumpversion`
+  # Should we build phi support
+  MIC_INFO=`type -p micinfo`
+  if [ -f "$MIC_INFO" ]; then
+    ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+    ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+  INTEL_VERSION=`icc -dumpversion`
 fi
 
 # Build directory
@@ -82,7 +82,9 @@ mkdir -p ${ZCFD_PACKAGE_NAME}_build
 
 # Build
 pushd ${ZCFD_PACKAGE_NAME}_build
-rm CMakeCache.txt
+if [ -f CMakeCache.txt ] ; then
+  rm CMakeCache.txt
+fi
 
 PREFIX=`pwd`/install
 export PATH=$PREFIX/bin:$PATH
@@ -114,7 +116,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
-      ../zCFDSuperbuild
+      ../zCFDSuperBuild
 
 make -j1
 
@@ -123,13 +125,13 @@ wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install
 # Install pip
 wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
 # Install yolk
-install/bin/pip install yolk
+install/bin/python install/bin/pip install yolk
 
 # Install requirements
-install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
+install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
 # If CUDA present install pycuda
 if [ -f "$CUDA_COMPILER" ]; then
-	install/bin/pip install pycuda==2014.1
+	install/bin/python install/bin/pip install pycuda==2014.1
   #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
   cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
