@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -eq 1 ]; then
+if [ $# -ge 1 ]; then
   ZTARGET=$1
 fi
 
@@ -18,11 +18,11 @@ pushd BUILD
 
 # Clone the repo
 if [ ! -d "zCFDSuperBuild" ]; then
-	git clone git@github.com:zenotech/zCFDSuperBuild.git
+  git clone git@github.com:zenotech/zCFDSuperBuild.git
 else
-	pushd zCFDSuperBuild
-	git pull 
-	popd
+  pushd zCFDSuperBuild
+  git pull 
+  popd
 fi
 
 # Checkout branch
@@ -58,7 +58,9 @@ ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG"
 # Check for presence of CUDA compiler
 CUDA_COMPILER=`type -p nvcc`
 if [ -f "$CUDA_COMPILER" ]; then
-	ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
+  ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
+  # build for fermi and kepler
+  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
 fi
 
 # Check for presence of Intel compiler
@@ -97,7 +99,7 @@ PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${
 
 CMAKE_EXE=`type -p cmake`
 if [ ! -f "$CMAKE_EXE" ]; then
-	CMAKE_EXE=cmake28
+  CMAKE_EXE=cmake28
 fi
 
 # Terminate script on first error
@@ -131,7 +133,7 @@ install/bin/python install/bin/pip install yolk
 install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
 # If CUDA present install pycuda
 if [ -f "$CUDA_COMPILER" ]; then
-	install/bin/python install/bin/pip install pycuda==2014.1
+  install/bin/python install/bin/pip install pycuda==2014.1
   #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
   cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
@@ -161,7 +163,7 @@ fi
 
 CPACK_EXE=`type -p cpack`
 if [ ! -f "$CPACK_EXE" ]; then
-	CPACK_EXE=cpack28
+  CPACK_EXE=cpack28
 fi
 
 # Package
