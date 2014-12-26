@@ -4,8 +4,24 @@ if [ $# -ge 1 ]; then
   ZTARGET=$1
 fi
 
+function build_success
+{
+  # Send a pushover.net notification
+  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+  echo 'Build zCFD - Complete'
+}
+
+function build_failed
+{
+  # Send a pushover.net notification
+  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+  echo 'Build zCFD - Failed'
+}
+
+trap build_failed EXIT
+
 # Check version of cmake
-CMAKE_VER=`cmake --version | grep 2.8`
+CMAKE_VER=`(cmake --version | grep 2.8) || true`
 if [ ! -n "$CMAKE_VER" ]; then
   echo "CMake 2.8 not found"
   exit 1
@@ -41,7 +57,7 @@ if [ -n "$ZTARGET" ]; then
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
   fi
 else
-  CPU_FLAG=`cat /proc/cpuinfo | grep flags | grep -q avx && echo $?`
+  CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
     CPU_FLAG='avx'
@@ -56,7 +72,7 @@ fi
 ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG"
 
 # Check for presence of CUDA compiler
-CUDA_COMPILER=`type -p nvcc`
+CUDA_COMPILER=`type -p nvcc || true`
 if [ -f "$CUDA_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
   # build for fermi and kepler
@@ -64,20 +80,28 @@ if [ -f "$CUDA_COMPILER" ]; then
 fi
 
 # Check for presence of Intel compiler
-INTEL_COMPILER=`type -p icc`
+INTEL_COMPILER=`type -p icc || true`
 INTEL_VERSION="15.0.0"
 if [ -f "$INTEL_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
   ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
   # Should we build phi support
-  MIC_INFO=`type -p micinfo`
+  MIC_INFO=`type -p micinfo || true`
   if [ -f "$MIC_INFO" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
   fi
   INTEL_VERSION=`icc -dumpversion`
 fi
+
+# Redirect output to a file
+logfile=${ZCFD_PACKAGE_NAME}.log
+echo "Redirecting output to: $logfile"
+exec > >(tee $logfile)
+exec 2>&1
+
+#exec > $logfile 2>&1
 
 # Build directory
 mkdir -p ${ZCFD_PACKAGE_NAME}_build
@@ -97,7 +121,7 @@ export BZIP2_LIBPATH=`pwd`/install/lib
 
 PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
-CMAKE_EXE=`type -p cmake`
+CMAKE_EXE=`type -p cmake || true`
 if [ ! -f "$CMAKE_EXE" ]; then
   CMAKE_EXE=cmake28
 fi
@@ -161,7 +185,7 @@ else
   popd
 fi
 
-CPACK_EXE=`type -p cpack`
+CPACK_EXE=`type -p cpack || true`
 if [ ! -f "$CPACK_EXE" ]; then
   CPACK_EXE=cpack28
 fi
@@ -173,5 +197,9 @@ popd
 popd
 cp BUILD/${ZCFD_PACKAGE_NAME}_build/${ZCFD_PACKAGE_NAME}*.tar.gz .
 
-echo 'Finished Build zCFD'
+# Clear exit trap
+trap '' EXIT
+build_success
+
+exit 0
 
