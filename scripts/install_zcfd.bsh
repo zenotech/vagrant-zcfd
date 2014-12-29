@@ -1,54 +1,116 @@
 #!/bin/bash
 
+if [ $# -ge 1 ]; then
+  ZTARGET=$1
+fi
+
+function build_success
+{
+  # Send a pushover.net notification
+  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+  echo 'Build zCFD - Complete'
+}
+
+function build_failed
+{
+  # Send a pushover.net notification
+  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+  echo 'Build zCFD - Failed'
+}
+
+trap build_failed EXIT
+
+# Check version of cmake
+CMAKE_VER=`(cmake --version | grep 2.8) || true`
+if [ ! -n "$CMAKE_VER" ]; then
+  echo "CMake 2.8 not found"
+  exit 1
+fi
+
 echo 'Building zCFD'
 
-mkdir BUILD
+mkdir -p BUILD
 pushd BUILD
 
 # Clone the repo
-if [ ! -d "zCFDSuperbuild" ]; then
-	git clone https://github.com/zenotech/zCFDSuperbuild.git
+if [ ! -d "zCFDSuperBuild" ]; then
+  git clone git@github.com:zenotech/zCFDSuperBuild.git
 else
-	pushd zCFDSuperbuild
-	git pull 
-	popd
+  pushd zCFDSuperBuild
+  git pull 
+  popd
 fi
 
 # Checkout branch
-pushd zCFDSuperbuild
-git checkout master
+pushd zCFDSuperBuild
+git checkout v0.1.0
 popd
 
-ZCFD_EXTRA_ARGS=""
+ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
+if [ -n "$ZTARGET" ]; then
+  echo $ZTARGET
+  if [ "$ZTARGET" == "avx" ]; then
+    CPU_FLAG='avx'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+  else
+    CPU_FLAG='sse'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  fi
+else
+  CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
+  if [ "$CPU_FLAG" == "0" ] ; then
+    # AVX
+    CPU_FLAG='avx'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+  else
+    # SSE
+    CPU_FLAG='sse'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  fi  
+fi
 
-ZCFD_PACKAGE_NAME="zCFD"
+ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG"
 
 # Check for presence of CUDA compiler
-CUDA_COMPILER=`which nvcc`
+CUDA_COMPILER=`type -p nvcc || true`
 if [ -f "$CUDA_COMPILER" ]; then
-	ZCFD_PACKAGE_NAME="zCFD-cuda"
+  ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
+  # build for fermi and kepler
+  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
 fi
 
 # Check for presence of Intel compiler
-INTEL_COMPILER=`which icc`
+INTEL_COMPILER=`type -p icc || true`
+INTEL_VERSION="15.0.0"
 if [ -f "$INTEL_COMPILER" ]; then
-	ZCFD_PACKAGE_NAME="zCFD-icc"
-	ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON"
+  ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+  ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-    # Should we build phi support
-    MIC_INFO=`which micinfo`
-    if [ -f "$MIC_INFO" ]; then
-        ZCFD_PACKAGE_NAME="zCFD-icc-phi"
-        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON"
-    fi
+  # Should we build phi support
+  MIC_INFO=`type -p micinfo || true`
+  if [ -f "$MIC_INFO" ]; then
+    ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+    ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+  INTEL_VERSION=`icc -dumpversion`
 fi
 
+# Redirect output to a file
+logfile=${ZCFD_PACKAGE_NAME}.log
+echo "Redirecting output to: $logfile"
+exec > >(tee $logfile)
+exec 2>&1
+
+#exec > $logfile 2>&1
+
 # Build directory
-mkdir ${ZCFD_PACKAGE_NAME}_build
+mkdir -p ${ZCFD_PACKAGE_NAME}_build
 
 # Build
 pushd ${ZCFD_PACKAGE_NAME}_build
-rm CMakeCache.txt
+if [ -f CMakeCache.txt ] ; then
+  rm CMakeCache.txt
+fi
 
 PREFIX=`pwd`/install
 export PATH=$PREFIX/bin:$PATH
@@ -59,10 +121,13 @@ export BZIP2_LIBPATH=`pwd`/install/lib
 
 PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
-CMAKE_EXE=`which cmake`
+CMAKE_EXE=`type -p cmake || true`
 if [ ! -f "$CMAKE_EXE" ]; then
-	CMAKE_EXE=cmake28
+  CMAKE_EXE=cmake28
 fi
+
+# Terminate script on first error
+set -e
 
 $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
@@ -77,7 +142,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
-      ../zCFDSuperbuild
+      ../zCFDSuperBuild
 
 make -j1
 
@@ -86,27 +151,43 @@ wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install
 # Install pip
 wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
 # Install yolk
-install/bin/pip install yolk
+install/bin/python install/bin/pip install yolk
 
 # Install requirements
-install/bin/pip install -r ../zCFDSuperbuild/requirements.txt
+install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
 # If CUDA present install pycuda
 if [ -f "$CUDA_COMPILER" ]; then
-	install/bin/pip install pycuda==2014.1
-    #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
-    cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
+  install/bin/python install/bin/pip install pycuda==2014.1
+  #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
+  cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
 fi
 
-# Always install the intel compiler redistributable libraries
-wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-tar xvf l_ccompxe_2015.0.090_redist.tgz
-pushd l_ccompxe_2015.0.090_redist
-./install.sh --eula --install-path ../install/intel
-popd
+# Need to fix up scripts in bin that use python
+P_SCRIPTS=`grep python install/bin/* | grep '#!' | cut -d : -f 1`
+for P in $P_SCRIPTS; do 
+  echo "Fixing python path in $P" 
+  sed -i.tmp -e "s/\#\!\/.*/\#\!\/usr\/bin\/env python/" $P
+  rm -f "${P}.tmp"  
+done
 
-CPACK_EXE=`which cpack`
+# Always install the intel compiler redistributable libraries
+if [ "$INTEL_VERSION" == "14.0.2" ]; then
+  wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
+  tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+  pushd l_ccompxe_2013_sp1.4.211_redist
+  ./install.sh --eula --install-path ../install/intel
+  popd
+else
+  wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+  tar xvf l_ccompxe_2015.0.090_redist.tgz
+  pushd l_ccompxe_2015.0.090_redist
+  ./install.sh --eula --install-path ../install/intel
+  popd
+fi
+
+CPACK_EXE=`type -p cpack || true`
 if [ ! -f "$CPACK_EXE" ]; then
-	CPACK_EXE=cpack28
+  CPACK_EXE=cpack28
 fi
 
 # Package
@@ -116,5 +197,9 @@ popd
 popd
 cp BUILD/${ZCFD_PACKAGE_NAME}_build/${ZCFD_PACKAGE_NAME}*.tar.gz .
 
-echo 'Finished Build zCFD'
+# Clear exit trap
+trap '' EXIT
+build_success
+
+exit 0
 

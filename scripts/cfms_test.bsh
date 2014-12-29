@@ -1,0 +1,46 @@
+#!/bin/bash -f
+
+
+if [ $# -ne 1 ]; then
+    echo 'Please specify release id'
+    exit 1
+fi
+
+RELEASE_ID=$1
+
+PREFIX=/gpfs/cfms/apps
+
+mkdir -p test/naca0012
+pushd test/naca0012
+
+# Start multiple screen windows
+screen -AmdS ztest -t default bash
+screen -S ztest -X screen -t native-sse
+screen -S ztest -X screen -t icc-sse
+screen -S ztest -X screen -t icc-avx
+screen -S ztest -X screen -t cuda-sse
+screen -S ztest -X screen -t phi-avx
+
+# For native window
+ZCFD_HOME="${PREFIX}/zCFD-sse-${RELEASE_ID}-Linux-64bit/bin"
+screen -S ztest -p 1 -X stuff $'source ${ZCFD_HOME}/activate\r'
+screen -S ztest -p 1 -X stuff $'mkdir -p native && cd native\r'
+screen -S ztest -p 1 -X stuff $'ln -s ../n0012_897-257_hex.h5 && ln -s ../n0012_897_a10p0.py\r'
+screen -S ztest -p 1 -X stuff $'mycluster --create=test.job --jobname=native --project=cfms --jobqueue=westmere --ntasks=2 --taskpernode=2 --script=mycluster-zcfd.bsh\r'
+screen -S ztest -p 1 -X stuff $'(export PROBLEM=n0012_897-257_hex.h5;export CASE=n0012_897_a10p0;mycluster --submit=test.job)\r'
+
+# For icc window
+
+# For icc window
+
+# For cuda-sse window
+ZCFD_HOME="${PREFIX}/zCFD-cuda-sse-${RELEASE_ID}-Linux-64bit/bin"
+screen -S ztest -p 4 -X stuff $'source ${ZCFD_HOME}/activate\r'
+screen -S ztest -p 4 -X stuff $'mkdir -p cuda-sse && cd cuda-sse\r'
+screen -S ztest -p 4 -X stuff $'ln -s ../n0012_897-257_hex.h5 && ln -s ../n0012_897_a10p0.py\r'
+screen -S ztest -p 4 -X stuff $'mycluster --create=test.job --jobname=cuda-sse --project=cfms --jobqueue=gpu --ntasks=2 --taskpernode=2 --script=mycluster-zcfd.bsh\r'
+screen -S ztest -p 4 -X stuff $'(export PROBLEM=n0012_897-257_hex.h5;export CASE=n0012_897_a10p0;mycluster --submit=test.job)\r'
+
+
+
+# For phi window
