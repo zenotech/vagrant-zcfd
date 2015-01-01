@@ -4,6 +4,11 @@ if [ $# -ge 1 ]; then
   ZTARGET=$1
 fi
 
+BUILD_LOCAL="false"
+if [ $# -ge 2 ]; then
+  BUILD_LOCAL="true"
+fi
+
 function build_success
 {
   # Send a pushover.net notification
@@ -45,6 +50,12 @@ fi
 pushd zCFDSuperBuild
 git checkout rlm-integrate
 popd
+
+if [ "$BUILD_LOCAL" == "1"]; then
+  ln -s ../../../zCFD zCFD
+  tar zcvf zCFD.tar.gz zCFD/*
+  BUILD_URL=`pwd`/zCFD.tar.gz
+fi
 
 ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
 if [ -n "$ZTARGET" ]; then
@@ -129,6 +140,8 @@ fi
 # Terminate script on first error
 set -e
 
+if [ "$BUILD_LOCAL" == "0"]; then
+
 $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
@@ -143,6 +156,26 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ../zCFDSuperBuild
+
+else
+
+$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
+      -DENABLE_boost:BOOL=ON \
+      -DENABLE_ffmpeg:BOOL=ON \
+      -DENABLE_hdf5:BOOL=ON \
+      -DENABLE_mpi:BOOL=ON \
+      -DENABLE_osmesa:BOOL=ON \
+      -DENABLE_python:BOOL=ON \
+      -DENABLE_paraviewsdk:BOOL=ON\
+      -DENABLE_paraview:BOOL=ON \
+      -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
+      -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
+      -DENABLE_zcfd:BOOL=ON \
+      -DzCFD_FROM_GIT:BOOL=OFF \
+      -DzCFD_URL:STRING="${BUILD_URL}" \
+      -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
+      ../zCFDSuperBuild
+fi
 
 make -j1
 
