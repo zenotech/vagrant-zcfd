@@ -51,7 +51,7 @@ pushd zCFDSuperBuild
 git checkout rlm-integrate
 popd
 
-if [ "$BUILD_LOCAL" == "1"]; then
+if [ "$BUILD_LOCAL" == "1" ] ; then
   ln -s ../../../zCFD zCFD
   tar zcvf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
@@ -140,7 +140,7 @@ fi
 # Terminate script on first error
 set -e
 
-if [ "$BUILD_LOCAL" == "0"]; then
+if [ "$BUILD_LOCAL" == "0" ] ; then
 
 $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
