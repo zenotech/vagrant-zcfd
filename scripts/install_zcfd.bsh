@@ -55,6 +55,7 @@ if [ "$BUILD_LOCAL" == "true" ] ; then
   ln -s ../../../zCFD zCFD
   tar zcvf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
+  BUILD_MD5=`md5sum $BUILD_URL | cut -d \  -f 1`
 fi
 
 ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
@@ -173,6 +174,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_zcfd:BOOL=ON \
       -DzCFD_FROM_GIT:BOOL=OFF \
       -DzCFD_URL:STRING="${BUILD_URL}" \
+      -DzCFD_URL_MD5:STRING:"${BUILD_MD5}" \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ../zCFDSuperBuild
 fi
