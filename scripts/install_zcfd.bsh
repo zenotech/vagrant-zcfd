@@ -9,6 +9,11 @@ if [ $# -ge 2 ]; then
   BUILD_LOCAL="true"
 fi
 
+TARGET=""
+if [ $# -ge 3 ]; then
+  TARGET=$3
+fi
+
 function build_success
 {
   # Send a pushover.net notification
@@ -170,7 +175,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
 
-make -j1
+make -j1 $TARGET
 
 # Install setuptools
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
