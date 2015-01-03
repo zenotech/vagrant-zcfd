@@ -49,13 +49,25 @@ fi
 # Checkout branch
 pushd zCFDSuperBuild
 git checkout rlm-integrate
+GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 popd
 
+#git rev-parse --abbrev-ref HEAD | sed 's/^.*[^0-9]\([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/'
+
+CMAKE_EXTRA_ARGS=""
 if [ "$BUILD_LOCAL" == "true" ] ; then
   ln -s ../../../zCFD zCFD
   tar zcvf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
   BUILD_MD5=`md5sum $BUILD_URL | cut -d \  -f 1`
+
+  CMAKE_EXTRA_ARGS="-DzCFD_FROM_GIT:BOOL=OFF \
+      -DzCFD_URL:STRING=${BUILD_URL} \
+      -DzCFD_URL_MD5:STRING=${BUILD_MD5}"
+fi
+
+if [ "$GIT_BRANCH" != "master" ]; then
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -Dzcfd_version_suffix:STRING=${GIT_BRANCH}"
 fi
 
 ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
@@ -141,7 +153,6 @@ fi
 # Terminate script on first error
 set -e
 
-if [ "$BUILD_LOCAL" == "false" ] ; then
 
 $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DENABLE_boost:BOOL=ON \
@@ -156,28 +167,8 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
+      ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
-
-else
-
-$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
-      -DENABLE_boost:BOOL=ON \
-      -DENABLE_ffmpeg:BOOL=ON \
-      -DENABLE_hdf5:BOOL=ON \
-      -DENABLE_mpi:BOOL=ON \
-      -DENABLE_osmesa:BOOL=ON \
-      -DENABLE_python:BOOL=ON \
-      -DENABLE_paraviewsdk:BOOL=ON\
-      -DENABLE_paraview:BOOL=ON \
-      -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
-      -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
-      -DENABLE_zcfd:BOOL=ON \
-      -DzCFD_FROM_GIT:BOOL=OFF \
-      -DzCFD_URL:STRING="${BUILD_URL}" \
-      -DzCFD_URL_MD5:STRING="${BUILD_MD5}" \
-      -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
-      ../zCFDSuperBuild
-fi
 
 make -j1
 
