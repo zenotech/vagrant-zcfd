@@ -215,7 +215,7 @@ exec 2>&1
 #exec > $logfile 2>&1
 
 # Build directory
-BUILD_DIR=${ZCFD_PACKAGE_NAME}_{BUILD_DEBUG}_build
+BUILD_DIR=${ZCFD_PACKAGE_NAME}_${BUILD_DEBUG}_build
 
 # Build directory
 mkdir -p ${BUILD_DIR}
