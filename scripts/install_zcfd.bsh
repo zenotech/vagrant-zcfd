@@ -132,7 +132,9 @@ popd
 
 CMAKE_EXTRA_ARGS=""
 if [ "$BUILD_LOCAL" == "true" ] ; then
-  ln -s ../../../zCFD zCFD
+  if [ ! -d zCFD ] ; then
+    ln -s ../../../zCFD zCFD
+  fi
   tar zcvf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
   BUILD_MD5=`md5sum $BUILD_URL | cut -d \  -f 1`
