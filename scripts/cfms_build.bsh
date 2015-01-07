@@ -10,20 +10,20 @@ screen -S zbuild -X screen -t phi-sse
 # For native window
 screen -S zbuild -p 1 -X stuff $'eval "$(ssh-agent -s)"\r'
 screen -S zbuild -p 1 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
-screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh sse\r'
+screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh -a sse\r'
 
 # For icc window
 screen -S zbuild -p 2 -X stuff $'eval "$(ssh-agent -s)"\r'
 screen -S zbuild -p 2 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
 screen -S zbuild -p 2 -X stuff $'module load icc\r'
-screen -S zbuild -p 2 -X stuff $'sleep 60 && ./install_zcfd.bsh sse\r'
+screen -S zbuild -p 2 -X stuff $'sleep 60 && ./install_zcfd.bsh -a sse\r'
 
 # For cuda window
 screen -S zbuild -p 3 -X stuff $'eval "$(ssh-agent -s)"\r'
 screen -S zbuild -p 3 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
 screen -S zbuild -p 3 -X stuff $'module load cuda/cuda5.5\r'
-screen -S zbuild -p 3 -X stuff $'sleep 10 && ./install_zcfd.bsh sse\r'
+screen -S zbuild -p 3 -X stuff $'sleep 10 && ./install_zcfd.bsh -a sse\r'
 
 # For phi window
 screen -S zbuild -p 4 -X stuff $'module load icc/icc-13.1\r'
-screen -S zbuild -p 4 -X stuff $'srun -p phi bash -c \'hostname;eval "$(ssh-agent -s)";ssh-add ~/.ssh/zdeploy_rsa;./install_zcfd.bsh sse\'\r'
+screen -S zbuild -p 4 -X stuff $'srun -p phi bash -c \'hostname;eval "$(ssh-agent -s)";ssh-add ~/.ssh/zdeploy_rsa;./install_zcfd.bsh -a sse\'\r'
