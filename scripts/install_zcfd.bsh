@@ -181,7 +181,10 @@ fi
 
 CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DMAKE_PARALLEL:STRING=${MAKE_PARALLEL}"
 
-ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG-${BUILD_DEBUG}"
+ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
+if [ "${BUILD_DEBUG}" == "Debug" ]; then
+  ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-debug"
+fi
 
 # Check for presence of CUDA compiler
 CUDA_COMPILER=`type -p nvcc || true`
@@ -216,7 +219,7 @@ exec 2>&1
 #exec > $logfile 2>&1
 
 # Build directory
-BUILD_DIR=${ZCFD_PACKAGE_NAME}_${BUILD_DEBUG}_build
+BUILD_DIR=${ZCFD_PACKAGE_NAME}_build
 
 # Build directory
 mkdir -p ${BUILD_DIR}
