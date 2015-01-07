@@ -182,9 +182,6 @@ fi
 CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DMAKE_PARALLEL:STRING=${MAKE_PARALLEL}"
 
 ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
-if [ "${BUILD_DEBUG}" == "Debug" ]; then
-  ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-debug"
-fi
 
 # Check for presence of CUDA compiler
 CUDA_COMPILER=`type -p nvcc || true`
@@ -208,6 +205,10 @@ if [ -f "$INTEL_COMPILER" ]; then
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
   fi
   INTEL_VERSION=`icc -dumpversion`
+fi
+
+if [ "${BUILD_DEBUG}" == "Debug" ]; then
+  ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-debug"
 fi
 
 # Redirect output to a file
