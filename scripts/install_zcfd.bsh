@@ -271,7 +271,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
 
-make -j1 $MAKE_TARGET
+make -j1 VERBOSE=true $MAKE_TARGET
 
 # Install setuptools
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
