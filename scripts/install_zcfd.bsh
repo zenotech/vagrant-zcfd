@@ -136,7 +136,7 @@ if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFD ] ; then
     ln -s ../../../zCFD zCFD
   fi
-  tar zcvf zCFD.tar.gz zCFD/*
+  tar zcf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
   BUILD_MD5=`md5sum $BUILD_URL | cut -d \  -f 1`
 
@@ -146,7 +146,7 @@ if [ "$BUILD_LOCAL" == "true" ] ; then
 fi
 
 
-ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST;-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG}"
+ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
 if [ -n "$ZTARGET" ]; then
   echo $ZTARGET
   if [ "$ZTARGET" == "avx" ]; then
@@ -168,6 +168,8 @@ else
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
   fi  
 fi
+
+ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
 
 # For release strip files
 if [ "${BUILD_DEBUG}" == "Release" ]; then
