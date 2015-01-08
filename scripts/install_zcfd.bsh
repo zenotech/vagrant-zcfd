@@ -255,7 +255,7 @@ if [ ! -f "$CMAKE_EXE" ]; then
   CMAKE_EXE=cmake28
 fi
 
-$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
+$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
