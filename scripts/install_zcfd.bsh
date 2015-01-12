@@ -152,20 +152,29 @@ if [ -n "$ZTARGET" ]; then
   if [ "$ZTARGET" == "avx" ]; then
     CPU_FLAG='avx'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
-  else
+  elfi [ "$ZTARGET" == "sse" ]; then
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  elfi [ "$ZTARGET" == "host" ]; then
+    CPU_FLAG='host'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
+  else
+    echo "Invalid architecture $ZTARGET"
+    exit 1  
   fi
 else
+  echo "Attempting to autodetect architecture type"
   CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
     CPU_FLAG='avx'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+    echo "Detected AVX"
   else
     # SSE
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+    echo "Defaulting to SSE"
   fi  
 fi
 
