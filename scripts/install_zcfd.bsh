@@ -152,10 +152,10 @@ if [ -n "$ZTARGET" ]; then
   if [ "$ZTARGET" == "avx" ]; then
     CPU_FLAG='avx'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
-  elfi [ "$ZTARGET" == "sse" ]; then
+  elif [ "$ZTARGET" == "sse" ]; then
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
-  elfi [ "$ZTARGET" == "host" ]; then
+  elif [ "$ZTARGET" == "host" ]; then
     CPU_FLAG='host'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
   else
