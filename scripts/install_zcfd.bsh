@@ -298,7 +298,7 @@ for P in $P_SCRIPTS; do
 done
 
 # Always install the intel compiler redistributable libraries
-if [ "$INTEL_VERSION" == "14.0.2" ]; then
+if [ "$INTEL_VERSION" == "14.0.4" ]; then
   wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
   tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
   pushd l_ccompxe_2013_sp1.4.211_redist
