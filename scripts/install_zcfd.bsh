@@ -1,8 +1,90 @@
 #!/bin/bash
 
-if [ $# -ge 1 ]; then
-  ZTARGET=$1
-fi
+# Terminate script on first error
+set -e
+
+BUILD_DEBUG="Release"
+BUILD_LOCAL="false"
+verbose=0
+MAKE_TARGET=""
+MAKE_PARALLEL="6"
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-h] [-a ARCH] ...
+Compile zCFD creating an installation tar file
+
+    -h          display this help and exit
+    -a ARCH     Base architecture.
+    -l          Compile local zCFD folder
+    -d          Compile debug version
+    -j 12       Compile in parallel
+
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -h|-\?|--help)   # Call a "show_help" function to display a synopsis, then exit.
+            show_help
+            exit
+            ;;
+        -a|--arch )       # Takes an option argument, ensuring it has been specified.
+            if [ "$#" -gt 1 ]; then
+                ZTARGET=$2
+                shift 2
+                continue
+            else
+                echo 'ERROR: Must specify a non-empty "--arch ARCH" argument.' >&2
+                exit 1
+            fi
+            ;;
+        --arch=?*)
+            ZTARGET=${1#*=} # Delete everything up to "=" and assign the remainder.
+            ;;
+        --arch=)         # Handle the case of an empty --file=
+            echo 'ERROR: Must specify a non-empty "--arch ARCH" argument.' >&2
+            exit 1
+            ;;
+        -j)
+            if [ "$#" -gt 1 ]; then
+                MAKE_PARALLEL=$2
+                shift 2
+                continue
+            else
+                echo 'ERROR: Must specify a non-empty "-j 12" argument.' >&2
+                exit 1
+            fi
+            ;;
+        -v|--verbose)
+            verbose=$((verbose + 1)) # Each -v argument adds 1 to verbosity.
+            ;;
+        -l|--local)
+            BUILD_LOCAL="true"
+            ;;
+        -d|--debug)
+            BUILD_DEBUG="Debug"
+            ;;
+        --)              # End of all options.
+            shift
+            break
+            ;;
+        -?*)
+            printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+            ;;
+        *)               # Default case: If no more options then break out of the loop.
+            break
+    esac
+
+    shift
+done
+
+#echo $ZTARGET
+#echo $BUILD_LOCAL
+#echo $BUILD_DEBUG
+#echo $MAKE_PARALLEL
+#exit 0
 
 function build_success
 {
@@ -43,8 +125,26 @@ fi
 
 # Checkout branch
 pushd zCFDSuperBuild
-git checkout develop
+git checkout rlm-integrate
+GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 popd
+
+#git rev-parse --abbrev-ref HEAD | sed 's/^.*[^0-9]\([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/'
+
+CMAKE_EXTRA_ARGS=""
+if [ "$BUILD_LOCAL" == "true" ] ; then
+  if [ ! -d zCFD ] ; then
+    ln -s ../../../zCFD zCFD
+  fi
+  tar zcf zCFD.tar.gz zCFD/*
+  BUILD_URL=`pwd`/zCFD.tar.gz
+  BUILD_MD5=`md5sum $BUILD_URL | cut -d \  -f 1`
+
+  CMAKE_EXTRA_ARGS="-DzCFD_FROM_GIT:BOOL=OFF \
+      -DzCFD_URL:STRING=${BUILD_URL} \
+      -DzCFD_URL_MD5:STRING=${BUILD_MD5}"
+fi
+
 
 ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
 if [ -n "$ZTARGET" ]; then
@@ -52,24 +152,47 @@ if [ -n "$ZTARGET" ]; then
   if [ "$ZTARGET" == "avx" ]; then
     CPU_FLAG='avx'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
-  else
+  elif [ "$ZTARGET" == "sse" ]; then
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+  elif [ "$ZTARGET" == "host" ]; then
+    CPU_FLAG='host'
+    ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
+  else
+    echo "Invalid architecture $ZTARGET"
+    exit 1  
   fi
 else
+  echo "Attempting to autodetect architecture type"
   CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
     CPU_FLAG='avx'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=AVX"
+    echo "Detected AVX"
   else
     # SSE
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
+    echo "Defaulting to SSE"
   fi  
 fi
 
-ZCFD_PACKAGE_NAME="zCFD-$CPU_FLAG"
+ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
+
+# For release strip files
+if [ "${BUILD_DEBUG}" == "Release" ]; then
+     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCPACK_STRIP_FILES:BOOL=ON"
+fi
+
+if [ "$GIT_BRANCH" != "master" ]; then
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -Dzcfd_version_suffix:STRING=${GIT_BRANCH}"
+  ZCFD_EXTRA_ARGS="-DVERSION_SUFFIX:STRING=${GIT_BRANCH};$ZCFD_EXTRA_ARGS"
+fi
+
+CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DMAKE_PARALLEL:STRING=${MAKE_PARALLEL}"
+
+ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
 
 # Check for presence of CUDA compiler
 CUDA_COMPILER=`type -p nvcc || true`
@@ -95,6 +218,10 @@ if [ -f "$INTEL_COMPILER" ]; then
   INTEL_VERSION=`icc -dumpversion`
 fi
 
+if [ "${BUILD_DEBUG}" == "Debug" ]; then
+  ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-debug"
+fi
+
 # Redirect output to a file
 logfile=${ZCFD_PACKAGE_NAME}.log
 echo "Redirecting output to: $logfile"
@@ -104,10 +231,13 @@ exec 2>&1
 #exec > $logfile 2>&1
 
 # Build directory
-mkdir -p ${ZCFD_PACKAGE_NAME}_build
+BUILD_DIR=${ZCFD_PACKAGE_NAME}_build
+
+# Build directory
+mkdir -p ${BUILD_DIR}
 
 # Build
-pushd ${ZCFD_PACKAGE_NAME}_build
+pushd ${BUILD_DIR}
 if [ -f CMakeCache.txt ] ; then
   rm CMakeCache.txt
 fi
@@ -119,17 +249,22 @@ export BOOST_ROOT=$PREFIX
 export BZIP2_INCLUDE=`pwd`/install/include
 export BZIP2_LIBPATH=`pwd`/install/lib
 
-PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=Release;-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
+-DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
+-DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;\
+-DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;\
+-DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;\
+-DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
+-DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
+-DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
+-DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
 CMAKE_EXE=`type -p cmake || true`
 if [ ! -f "$CMAKE_EXE" ]; then
   CMAKE_EXE=cmake28
 fi
 
-# Terminate script on first error
-set -e
-
-$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
+$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
@@ -142,9 +277,10 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=Release \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
+      ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
 
-make -j1
+make -j1 VERBOSE=true $MAKE_TARGET
 
 # Install setuptools
 wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
@@ -171,7 +307,7 @@ for P in $P_SCRIPTS; do
 done
 
 # Always install the intel compiler redistributable libraries
-if [ "$INTEL_VERSION" == "14.0.2" ]; then
+if [ "$INTEL_VERSION" == "14.0.4" ]; then
   wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
   tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
   pushd l_ccompxe_2013_sp1.4.211_redist
@@ -191,11 +327,11 @@ if [ ! -f "$CPACK_EXE" ]; then
 fi
 
 # Package
-$CPACK_EXE -G TGZ # --debug --verbose
+$CPACK_EXE -G TGZ --verbose # --debug --verbose
 
 popd 
 popd
-cp BUILD/${ZCFD_PACKAGE_NAME}_build/${ZCFD_PACKAGE_NAME}*.tar.gz .
+cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
 
 # Clear exit trap
 trap '' EXIT
