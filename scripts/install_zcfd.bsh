@@ -43,7 +43,7 @@ fi
 
 # Checkout branch
 pushd zCFDSuperBuild
-git checkout develop
+git checkout release-0.2.0
 popd
 
 ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
