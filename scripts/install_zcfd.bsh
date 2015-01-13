@@ -125,7 +125,7 @@ fi
 
 # Checkout branch
 pushd zCFDSuperBuild
-git checkout develop
+git checkout power8-gpu
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 popd
 
