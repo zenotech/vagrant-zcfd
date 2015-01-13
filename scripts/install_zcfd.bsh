@@ -125,7 +125,7 @@ fi
 
 # Checkout branch
 pushd zCFDSuperBuild
-git checkout rlm-integrate
+git checkout develop
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 popd
 
