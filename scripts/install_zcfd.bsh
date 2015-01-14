@@ -200,6 +200,7 @@ if [ -f "$CUDA_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
   # build for fermi and kepler
   ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
 fi
 
 # Check for presence of Intel compiler
