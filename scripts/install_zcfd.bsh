@@ -125,7 +125,7 @@ fi
 
 # Checkout branch
 pushd zCFDSuperBuild
-git checkout v0.2.0
+git checkout develop
 GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 popd
 
