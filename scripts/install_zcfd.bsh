@@ -185,7 +185,7 @@ if [ "${BUILD_DEBUG}" == "Release" ]; then
      CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCPACK_STRIP_FILES:BOOL=ON"
 fi
 
-if [ "$GIT_BRANCH" != "master" ]; then
+if [ "$GIT_BRANCH" != "HEAD" ]; then
   CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -Dzcfd_version_suffix:STRING=${GIT_BRANCH}"
   ZCFD_EXTRA_ARGS="-DVERSION_SUFFIX:STRING=${GIT_BRANCH};$ZCFD_EXTRA_ARGS"
 fi
