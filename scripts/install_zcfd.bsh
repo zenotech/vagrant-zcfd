@@ -4,7 +4,8 @@
 set -e
 
 BUILD_DEBUG="Release"
-BUILD_LOCAL="false"
+BUILD_LOCAL="true"
+BUILD_CUDA="true"
 verbose=0
 MAKE_TARGET=""
 MAKE_PARALLEL="6"
@@ -17,9 +18,12 @@ Compile zCFD creating an installation tar file
 
     -h          display this help and exit
     -a ARCH     Base architecture.
-    -l          Compile local zCFD folder
+    -l          Compile local zCFD folder - default
+    -r          Compile remote copy
     -d          Compile debug version
+    -c          Compile for cpu only
     -j 12       Compile in parallel
+    -t TARGET   Compile specific target
 
 EOF
 }
@@ -63,8 +67,17 @@ while [ "$#" -gt 0 ]; do
         -l|--local)
             BUILD_LOCAL="true"
             ;;
+        -r|--remote)
+            BUILD_LOCAL="false"
+            ;;
         -d|--debug)
             BUILD_DEBUG="Debug"
+            ;;
+        -c|--cpuonly)
+            BUILD_CUDA="false"
+            ;;
+        -t|--target)
+            MAKE_TARGET=$2
             ;;
         --)              # End of all options.
             shift
@@ -103,16 +116,24 @@ function build_failed
 trap build_failed EXIT
 
 # Check version of cmake
-CMAKE_VER=`(cmake --version | grep 2.8) || true`
-if [ ! -n "$CMAKE_VER" ]; then
-  echo "CMake 2.8 not found"
-  exit 1
-fi
+#CMAKE_VER=`(cmake --version | grep 2.8) || true`
+#if [ ! -n "$CMAKE_VER" ]; then
+#  echo "CMake 2.8 not found"
+#  exit 1
+#fi
 
-echo 'Building zCFD'
+UNAME=`uname`
+
+echo "Building zCFD on ${UNAME}"
 
 mkdir -p BUILD
 pushd BUILD
+
+if [ "$BUILD_LOCAL" == "true" ] ; then
+  if [ ! -d zCFDSuperBuild ] ; then
+    ln -s ../../../zCFDSuperBuild zCFDSuperBuild
+  fi
+fi
 
 # Clone the repo
 if [ ! -d "zCFDSuperBuild" ]; then
@@ -195,12 +216,21 @@ CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DMAKE_PARALLEL:STRING=${MAKE_PARALLEL}"
 ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
 
 # Check for presence of CUDA compiler
+if [ "$BUILD_CUDA" == "true" ]; then
 CUDA_COMPILER=`type -p nvcc || true`
+if [ "${UNAME}" == "Darwin" ] ; then
+  CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
+fi
+else
+  CUDA_COMPILER=
+fi
 if [ -f "$CUDA_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
   # build for fermi and kepler
   ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
   ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
+else
+  ZCFD_EXTRA_ARGS="-DBUILD_CUDA:BOOL=OFF"
 fi
 
 # Check for presence of Intel compiler
@@ -250,19 +280,39 @@ export BOOST_ROOT=$PREFIX
 export BZIP2_INCLUDE=`pwd`/install/include
 export BZIP2_LIBPATH=`pwd`/install/lib
 
-PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
--DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
--DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;\
--DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;\
--DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;\
--DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
--DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
--DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
--DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
 CMAKE_EXE=`type -p cmake || true`
 if [ ! -f "$CMAKE_EXE" ]; then
   CMAKE_EXE=cmake28
+fi
+
+if [ "${UNAME}" == "Darwin" ] ; then
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10" 
+  PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
+  -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
+  -DVTK_XDMF_USE_MPI:BOOL=ON;\
+  -DVTK_USE_SYSTEM_HDF5:BOOL=ON;\
+  -DXDMF_BUILD_MPI:BOOL=ON;\
+  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;"
+  ZCFD_EXTRA_ARGS="-DDISABLE_LM:BOOL=ON;$ZCFD_EXTRA_ARGS"
+
+  if [ ! -f "$CUDA_COMPILER" ]; then
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++" 
+    ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
+  fi
+
+else
+  # For Linux
+  PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
+                -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
+                -DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;\
+                -DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;\
+                -DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;\
+                -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
+                -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
+                -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+
 fi
 
 $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
@@ -307,19 +357,21 @@ for P in $P_SCRIPTS; do
   rm -f "${P}.tmp"  
 done
 
-# Always install the intel compiler redistributable libraries
-if [ "$INTEL_VERSION" == "14.0.4" ]; then
-  wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
-  tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
-  pushd l_ccompxe_2013_sp1.4.211_redist
-  ./install.sh --eula --install-path ../install/intel
-  popd
-else
-  wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-  tar xvf l_ccompxe_2015.0.090_redist.tgz
-  pushd l_ccompxe_2015.0.090_redist
-  ./install.sh --eula --install-path ../install/intel
-  popd
+if [ "${UNAME}" != "Darwin" ] ; then
+  # Always install the intel compiler redistributable libraries
+  if [ "$INTEL_VERSION" == "14.0.4" ]; then
+    wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
+    tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+    pushd l_ccompxe_2013_sp1.4.211_redist
+    ./install.sh --eula --install-path ../install/intel
+    popd
+  else
+    wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+    tar xvf l_ccompxe_2015.0.090_redist.tgz
+    pushd l_ccompxe_2015.0.090_redist
+    ./install.sh --eula --install-path ../install/intel
+    popd
+  fi
 fi
 
 CPACK_EXE=`type -p cpack || true`
