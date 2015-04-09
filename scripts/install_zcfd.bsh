@@ -6,6 +6,7 @@ set -e
 BUILD_DEBUG="Release"
 BUILD_LOCAL="true"
 BUILD_CUDA="true"
+BUILD_INTEL="true"
 verbose=0
 MAKE_TARGET=""
 MAKE_PARALLEL="6"
@@ -75,6 +76,9 @@ while [ "$#" -gt 0 ]; do
             ;;
         -c|--cpuonly)
             BUILD_CUDA="false"
+            ;;
+        -g|--gcconly)
+            BUILD_INTEL="false"
             ;;
         -t|--target)
             MAKE_TARGET=$2
@@ -217,13 +221,13 @@ ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
 
 # Check for presence of CUDA compiler
 if [ "$BUILD_CUDA" == "true" ]; then
-CUDA_COMPILER=`type -p nvcc || true`
-if [ "${UNAME}" == "Darwin" ] ; then
-  CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
-fi
-else
-  CUDA_COMPILER=
-fi
+  CUDA_COMPILER=`type -p nvcc || true`
+  if [ "${UNAME}" == "Darwin" ] ; then
+    CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
+  fi
+  else
+    CUDA_COMPILER=
+  fi
 if [ -f "$CUDA_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
   # build for fermi and kepler
@@ -234,19 +238,24 @@ else
 fi
 
 # Check for presence of Intel compiler
-INTEL_COMPILER=`type -p icc || true`
-INTEL_VERSION="15.0.0"
-if [ -f "$INTEL_COMPILER" ]; then
-  ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
-  ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
+if [ "$BUILD_INTEL" == "true" ]; then
+  INTEL_COMPILER=`type -p icc || true`
+  INTEL_VERSION="15.0.0"
+  if [ -f "$INTEL_COMPILER" ]; then
+    ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+    ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-  # Should we build phi support
-  MIC_INFO=`type -p micinfo || true`
-  if [ -f "$MIC_INFO" ]; then
-    ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
-    ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+    # Should we build phi support
+    MIC_INFO=`type -p micinfo || true`
+    if [ -f "$MIC_INFO" ]; then
+      ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+      ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+    fi
+    INTEL_VERSION=`icc -dumpversion`
   fi
-  INTEL_VERSION=`icc -dumpversion`
+else
+  INTEL_COMPILER=
+  INTEL_VERSION=
 fi
 
 if [ "${BUILD_DEBUG}" == "Debug" ]; then
