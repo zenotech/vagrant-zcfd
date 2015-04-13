@@ -10,6 +10,7 @@ BUILD_INTEL="true"
 verbose=0
 MAKE_TARGET=""
 MAKE_PARALLEL="6"
+MAKE_FAST="false"
 
 # Usage info
 show_help() {
@@ -25,6 +26,8 @@ Compile zCFD creating an installation tar file
     -c          Compile for cpu only
     -j 12       Compile in parallel
     -t TARGET   Compile specific target
+    -f          Compile zCFD fast (ignores dependencies)
+    -g          Compile using gcc
 
 EOF
 }
@@ -83,6 +86,9 @@ while [ "$#" -gt 0 ]; do
         -t|--target)
             MAKE_TARGET=$2
             ;;
+        -f|--fast)
+            MAKE_FAST="true"
+            ;;            
         --)              # End of all options.
             shift
             break
@@ -305,6 +311,9 @@ if [ "${UNAME}" == "Darwin" ] ; then
   -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;"
   ZCFD_EXTRA_ARGS="-DDISABLE_LM:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
+  if [ "${MAKE_FAST}" == "true" ] ; then
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
+  fi
   #if [ ! -f "$CUDA_COMPILER" ]; then
   #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++" 
   #  ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
@@ -342,58 +351,62 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
 
 make -j1 VERBOSE=true $MAKE_TARGET
 
-# Install setuptools
-wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
-# Install pip
-wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
-# Install yolk
-install/bin/python install/bin/pip install yolk
+if [ "${MAKE_FAST}" == "false" ] ; then
 
-# Install requirements
-install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
-# If CUDA present install pycuda
-if [ -f "$CUDA_COMPILER" ]; then
-  install/bin/python install/bin/pip install pycuda==2014.1
-  #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
-  cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
-fi
+  # Install setuptools
+  wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
+  # Install pip
+  wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
+  # Install yolk
+  install/bin/python install/bin/pip install yolk
 
-# Need to fix up scripts in bin that use python
-P_SCRIPTS=`grep python install/bin/* | grep '#!' | cut -d : -f 1`
-for P in $P_SCRIPTS; do 
-  echo "Fixing python path in $P" 
-  sed -i.tmp -e "s/\#\!\/.*/\#\!\/usr\/bin\/env python/" $P
-  rm -f "${P}.tmp"  
-done
-
-if [ "${UNAME}" != "Darwin" ] ; then
-  # Always install the intel compiler redistributable libraries
-  if [ "$INTEL_VERSION" == "14.0.4" ]; then
-    wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
-    tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
-    pushd l_ccompxe_2013_sp1.4.211_redist
-    ./install.sh --eula --install-path ../install/intel
-    popd
-  else
-    wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-    tar xvf l_ccompxe_2015.0.090_redist.tgz
-    pushd l_ccompxe_2015.0.090_redist
-    ./install.sh --eula --install-path ../install/intel
-    popd
+  # Install requirements
+  install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
+  # If CUDA present install pycuda
+  if [ -f "$CUDA_COMPILER" ]; then
+    install/bin/python install/bin/pip install pycuda==2014.1
+    #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
+    cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
   fi
+
+  # Need to fix up scripts in bin that use python
+  P_SCRIPTS=`grep python install/bin/* | grep '#!' | cut -d : -f 1`
+  for P in $P_SCRIPTS; do 
+    echo "Fixing python path in $P" 
+    sed -i.tmp -e "s/\#\!\/.*/\#\!\/usr\/bin\/env python/" $P
+    rm -f "${P}.tmp"  
+  done
+
+  if [ "${UNAME}" != "Darwin" ] ; then
+    # Always install the intel compiler redistributable libraries
+    if [ "$INTEL_VERSION" == "14.0.4" ]; then
+      wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
+      tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+      pushd l_ccompxe_2013_sp1.4.211_redist
+      ./install.sh --eula --install-path ../install/intel
+      popd
+    else
+      wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+      tar xvf l_ccompxe_2015.0.090_redist.tgz
+      pushd l_ccompxe_2015.0.090_redist
+      ./install.sh --eula --install-path ../install/intel
+      popd
+    fi
+  fi
+
+  CPACK_EXE=`type -p cpack || true`
+  if [ ! -f "$CPACK_EXE" ]; then
+    CPACK_EXE=cpack28
+  fi
+
+  # Package
+  $CPACK_EXE -G TGZ --verbose # --debug --verbose
+
+  popd 
+  popd
+  cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
+
 fi
-
-CPACK_EXE=`type -p cpack || true`
-if [ ! -f "$CPACK_EXE" ]; then
-  CPACK_EXE=cpack28
-fi
-
-# Package
-$CPACK_EXE -G TGZ --verbose # --debug --verbose
-
-popd 
-popd
-cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
 
 # Clear exit trap
 trap '' EXIT
