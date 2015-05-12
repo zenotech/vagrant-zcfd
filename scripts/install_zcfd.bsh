@@ -258,6 +258,10 @@ else
   INTEL_VERSION=
 fi
 
+# Append system name
+ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-${UNAME}"
+
+# Append compile type
 if [ "${BUILD_DEBUG}" == "Debug" ]; then
   ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-debug"
 fi
