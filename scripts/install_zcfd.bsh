@@ -290,7 +290,7 @@ fi
 
 PREFIX=`pwd`/install
 export PATH=$PREFIX/bin:$PATH
-export LD_LIBRARY_PATH=$PREFIX/lib
+export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export BOOST_ROOT=$PREFIX
 export BZIP2_INCLUDE=`pwd`/install/include
 export BZIP2_LIBPATH=`pwd`/install/lib
@@ -333,7 +333,7 @@ else
 
 fi
 
-$CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
+$CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       -DENABLE_boost:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
@@ -351,6 +351,7 @@ $CMAKE_EXE -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
 
 make -j1 VERBOSE=true $MAKE_TARGET
 
+
 if [ "${MAKE_FAST}" == "false" ] ; then
 
   # Install setuptools
@@ -366,7 +367,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   if [ -f "$CUDA_COMPILER" ]; then
     install/bin/python install/bin/pip install pycuda==2014.1
     #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
-    cp "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
+    cp -r "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
   fi
 
   # Need to fix up scripts in bin that use python
