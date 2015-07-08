@@ -266,6 +266,7 @@ if [ "$BUILD_INTEL" == "true" ]; then
     fi
     INTEL_VERSION=`icc -dumpversion`
   fi
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
 else
   INTEL_COMPILER=
   INTEL_VERSION=
