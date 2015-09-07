@@ -395,28 +395,33 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     rm -f "${P}.tmp"  
   done
 
-  if [ "${UNAME}" != "Darwin" ] ; then
-    # Always install the intel compiler redistributable libraries
-    if [ "$INTEL_VERSION" == "14.0.4" ]; then
-      wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
-      tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
-      pushd l_ccompxe_2013_sp1.4.211_redist
-      ./install.sh --eula --install-path ../install/intel
-      popd
-    elif [ "$INTEL_VERSION" == "15.0.0" ]; then
-      wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-      tar xvf l_ccompxe_2015.0.090_redist.tgz
-      pushd l_ccompxe_2015.0.090_redist
-      ./install.sh --eula --install-path ../install/intel
-      popd
-    elif [ "$INTEL_VERSION" == "16.0.0" ]; then
-      wget http://packages.zenotech.com/l_comp_lib_2016.0.109_comp.cpp_redist.tgz
-      tar xvf l_ccompxe_2015.0.090_redist.tgz
-      pushd l_ccompxe_2015.0.090_redist
-      ./install.sh --eula --install-path ../install/intel
-      popd
-    else
-      echo "Intel Compiler Version not recognised - missing redistributable library"
+  if [ "$BUILD_INTEL" == "true" ]; then
+    if [ "${UNAME}" != "Darwin" ] ; then
+      # Always install the intel compiler redistributable libraries
+      if [ "$INTEL_VERSION" == "14.0.4" ]; then
+        wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
+        tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+        pushd l_ccompxe_2013_sp1.4.211_redist
+        ./install.sh --eula --install-path ../install/intel
+        popd
+        cp -r "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
+      elif [ "$INTEL_VERSION" == "15.0.0" ]; then
+        wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+        tar xvf l_ccompxe_2015.0.090_redist.tgz
+        pushd l_ccompxe_2015.0.090_redist
+        ./install.sh --eula --install-path ../install/intel
+        popd
+        cp -r "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
+      elif [ "$INTEL_VERSION" == "16.0.0" ]; then
+        wget http://packages.zenotech.com/l_comp_lib_2016.0.109_comp.cpp_redist.tgz
+        tar xvf l_comp_lib_2016.0.109_comp.cpp_redist.tgz
+        pushd l_comp_lib_2016.0.109_comp.cpp_redist
+        ./install.sh --eula --install-path ../install/intel
+        popd
+        cp -r "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
+      else
+        echo "Intel Compiler Version not recognised - missing redistributable library"
+      fi
     fi
   fi
 
