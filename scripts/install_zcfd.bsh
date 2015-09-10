@@ -232,6 +232,9 @@ CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DMAKE_PARALLEL:STRING=${MAKE_PARALLEL}"
 
 ZCFD_PACKAGE_NAME="zCFD-${CPU_FLAG}"
 
+# Check gcc
+GCC_COMPILER=`type -p gcc || true`
+
 # Check for presence of CUDA compiler
 if [ "$BUILD_CUDA" == "true" ]; then
   CUDA_COMPILER=`type -p nvcc || true`
@@ -270,6 +273,7 @@ if [ "$BUILD_INTEL" == "true" ]; then
 else
   INTEL_COMPILER=
   INTEL_VERSION=
+
 fi
 
 if [ "${BUILD_DEBUG}" == "Debug" ]; then
@@ -423,9 +427,14 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         echo "Intel Compiler Version not recognised - missing redistributable library"
 
         # Create empty directory as CPACK expects a directory
-        mkdir install/intel
+        mkdir -p install/intel
       fi
     fi
+  else
+    # For gcc compile need to copy libgomp.so
+    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgomp* install/lib
+    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libquadmath* install/lib
+    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgfortran* install/lib
   fi
 
   CPACK_EXE=`type -p cpack || true`
