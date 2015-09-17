@@ -410,14 +410,18 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         popd
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
       elif [ "$INTEL_VERSION" == "15.0.0" ]; then
-        wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+        if [ ! -f l_ccompxe_2015.0.090_redist.tgz ]; then
+          wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
+        fi
         tar xvf l_ccompxe_2015.0.090_redist.tgz
         pushd l_ccompxe_2015.0.090_redist
         ./install.sh --eula --install-path ../install/intel
         popd
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
       elif [ "$INTEL_VERSION" == "16.0.0" ]; then
-        wget http://packages.zenotech.com/l_comp_lib_2016.0.109_comp.cpp_redist.tgz
+        if [ ! -f l_comp_lib_2016.0.109_comp.cpp_redist.tgz ]; then
+          wget http://packages.zenotech.com/l_comp_lib_2016.0.109_comp.cpp_redist.tgz
+        fi
         tar xvf l_comp_lib_2016.0.109_comp.cpp_redist.tgz
         pushd l_comp_lib_2016.0.109_comp.cpp_redist
         ./install.sh --eula --install-path ../install/intel
@@ -436,6 +440,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgomp* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libquadmath* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgfortran* install/lib
+    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libstdc++* install/lib
   fi
 
   CPACK_EXE=`type -p cpack || true`
