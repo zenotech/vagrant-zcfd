@@ -439,11 +439,13 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   mkdir -p install/intel
 
   if [ "${UNAME}" != "Darwin" ] ; then
+    set +e
     # For gcc compile need to copy libgomp.so
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgomp* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libquadmath* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgfortran* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libstdc++* install/lib
+    set -e
   fi
 
   CPACK_EXE=`type -p cpack || true`
