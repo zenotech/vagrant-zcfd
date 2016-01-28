@@ -269,12 +269,11 @@ if [ "$BUILD_INTEL" == "true" ]; then
       ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
     fi
     INTEL_VERSION=`icc -dumpversion`
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
   fi
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
 else
   INTEL_COMPILER=
   INTEL_VERSION=
-
 fi
 
 if [ "${BUILD_DEBUG}" == "Debug" ]; then
@@ -315,7 +314,7 @@ if [ ! -f "$CMAKE_EXE" ]; then
 fi
 
 if [ "${UNAME}" == "Darwin" ] ; then
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10" 
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11" 
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
   -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
@@ -331,7 +330,31 @@ if [ "${UNAME}" == "Darwin" ] ; then
   #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++" 
   #  ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
   #fi
+elif [[ -n "$CRAYOS_VERSION" ]]; then
+  #statements
+  # For Linux
+  PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
+                -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
+                -DVTK_OPENGL_HAS_OSMESA:BOOL=ON;-DVTK_XDMF_USE_MPI:BOOL=ON;\
+                -DVTK_USE_SYSTEM_HDF5:BOOL=ON;-DXDMF_BUILD_MPI:BOOL=ON;\
+                -DOSMESA_INCLUDE_DIR:PATH=${PREFIX}/include;\
+                -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
+                -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
+                -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
 
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=${CRAYPE_DIR}/bin/cc \
+                    -DCMAKE_CXX_COMPILER=${CRAYPE_DIR}/bin/CC \
+                    -DCMAKE_Fortran_COMPILER=${CRAYPE_DIR}/bin/ftn \
+                    -DUSE_SYSTEM_bzip2:BOOL=ON -DUSE_SYSTEM_freetype:BOOL=ON \
+                    -DUSE_SYSTEM_lbxml2:BOOL=ON -DUSE_SYSTEM_png:BOOL=ON -DUSE_SYSTEM_zlib:BOOL=ON \
+                    -DUSE_SYSTEM_hdf5:BOOL=ON -DUSE_SYSTEM_lapack:BOOL=ON -DUSE_SYSTEM_mpi:BOOL=ON \
+                    -DBLAS_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so \
+                    -DLAPACK_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so"
+  if [ "${MAKE_FAST}" == "true" ] ; then
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
+    ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi  
 else
   # For Linux
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
@@ -379,12 +402,28 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   # Install setuptools
   wget --no-check-certificate https://bootstrap.pypa.io/ez_setup.py -O - | install/bin/python
   # Install pip
-  wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
+  #wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | install/bin/python
+  if [ ! -f pip-7.1.2.tar.gz ]; then
+    wget --no-check-certificate https://pypi.python.org/packages/source/p/pip/pip-7.1.2.tar.gz#md5=3823d2343d9f3aaab21cf9c917710196
+  fi
+  tar xvf pip-7.1.2.tar.gz
+  pushd pip-7.1.2
+  ../install/bin/python setup.py install
+  popd
+
   # Install yolk
-  install/bin/python install/bin/pip install yolk
+  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+
+  # Install mpi4py
+  #./install/bin/python setup.py build --mpicc=cc --mpicxx=CC --mpif95=ftn
+
+  # Install numpy
+#export CC=cc
+#export CXX=CC
+#export FC=ftn
 
   # Install requirements
-  install/bin/python install/bin/pip install -r ../zCFDSuperBuild/requirements.txt
+  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
     install/bin/python install/bin/pip install pycuda==2014.1
@@ -419,12 +458,12 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         ./install.sh --eula --install-path ../install/intel
         popd
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
-      elif [ "$INTEL_VERSION" == "16.0.0" ]; then
-        if [ ! -f l_comp_lib_2016.0.109_comp.cpp_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_comp_lib_2016.0.109_comp.cpp_redist.tgz
+      elif [ "$INTEL_VERSION" == "16.0.1" ]; then
+        if [ ! -f l_comp_lib_2016.1.150_comp.cpp_redist.tgz ]; then
+          wget http://packages.zenotech.com/l_comp_lib_2016.1.150_comp.cpp_redist.tgz
         fi
-        tar xvf l_comp_lib_2016.0.109_comp.cpp_redist.tgz
-        pushd l_comp_lib_2016.0.109_comp.cpp_redist
+        tar xvf l_comp_lib_2016.1.150_comp.cpp_redist.tgz
+        pushd l_comp_lib_2016.1.150_comp.cpp_redist
         ./install.sh --eula --install-path ../install/intel
         popd
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
