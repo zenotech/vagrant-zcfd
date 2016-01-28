@@ -91,7 +91,7 @@ while [ "$#" -gt 0 ]; do
             ;;
         -f|--fast)
             MAKE_FAST="true"
-            ;;            
+            ;;
         -o|--offline)
             BUILD_OFFLINE="true"
             ;;
@@ -157,7 +157,7 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
   else
     pushd zCFDSuperBuild
-    git pull 
+    git pull
     popd
   fi
 
@@ -199,7 +199,7 @@ if [ -n "$ZTARGET" ]; then
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=HOST"
   else
     echo "Invalid architecture $ZTARGET"
-    exit 1  
+    exit 1
   fi
 else
   echo "Attempting to autodetect architecture type"
@@ -214,7 +214,7 @@ else
     CPU_FLAG='sse'
     ZCFD_EXTRA_ARGS="-DOPT_ARCH:STRING=SSE"
     echo "Defaulting to SSE"
-  fi  
+  fi
 fi
 
 ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
@@ -327,7 +327,7 @@ if [ "${UNAME}" == "Darwin" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
   fi
   #if [ ! -f "$CUDA_COMPILER" ]; then
-  #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++" 
+  #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
   #  ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
   #fi
 elif [[ -n "$CRAYOS_VERSION" ]]; then
@@ -380,6 +380,7 @@ fi
 
 $CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       -DENABLE_boost:BOOL=ON \
+      -DENABLE_lapack:BOOL=ON \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_hdf5:BOOL=ON \
       -DENABLE_mpi:BOOL=ON \
@@ -433,10 +434,10 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 
   # Need to fix up scripts in bin that use python
   P_SCRIPTS=`grep python install/bin/* | grep '#!' | cut -d : -f 1`
-  for P in $P_SCRIPTS; do 
-    echo "Fixing python path in $P" 
+  for P in $P_SCRIPTS; do
+    echo "Fixing python path in $P"
     sed -i.tmp -e "s/\#\!\/.*/\#\!\/usr\/bin\/env python/" $P
-    rm -f "${P}.tmp"  
+    rm -f "${P}.tmp"
   done
 
   if [ "$BUILD_INTEL" == "true" ]; then
@@ -472,16 +473,18 @@ if [ "${MAKE_FAST}" == "false" ] ; then
       fi
     fi
   fi
-  
+
   # Create empty directory as CPACK expects a directory
   mkdir -p install/intel
 
   if [ "${UNAME}" != "Darwin" ] ; then
+    set +e
     # For gcc compile need to copy libgomp.so
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgomp* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libquadmath* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgfortran* install/lib
     cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libstdc++* install/lib
+    set -e
   fi
 
   CPACK_EXE=`type -p cpack || true`
@@ -493,7 +496,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   #$CPACK_EXE -G TGZ --verbose # --debug --verbose
   $CPACK_EXE -G TGZ
 
-  popd 
+  popd
   popd
   cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
 
