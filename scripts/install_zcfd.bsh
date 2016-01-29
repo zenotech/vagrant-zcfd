@@ -242,9 +242,9 @@ if [ "$BUILD_CUDA" == "true" ]; then
   if [ "${UNAME}" == "Darwin" ] ; then
     CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
   fi
-  else
-    CUDA_COMPILER=
-  fi
+else
+  CUDA_COMPILER=
+fi
 if [ -f "$CUDA_COMPILER" ]; then
   ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
   # build for fermi and kepler
@@ -255,10 +255,10 @@ else
 fi
 
 # Check for presence of Intel compiler
-if [ "$BUILD_INTEL" == "true" ]; then
-  INTEL_COMPILER=`type -p icc || true`
-  INTEL_VERSION="15.0.0"
-  if [ -f "$INTEL_COMPILER" ]; then
+INTEL_COMPILER=`type -p icc || true`
+if [ -f "$INTEL_COMPILER" ]; then
+  INTEL_VERSION=`icc -dumpversion`
+  if [ "$BUILD_INTEL" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
@@ -268,7 +268,6 @@ if [ "$BUILD_INTEL" == "true" ]; then
       ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
       ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
     fi
-    INTEL_VERSION=`icc -dumpversion`
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
   fi
 else
@@ -440,12 +439,12 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     rm -f "${P}.tmp"
   done
 
-  if [ "$BUILD_INTEL" == "true" ]; then
+  if [ -f "$INTEL_COMPILER" ]; then
     if [ "${UNAME}" != "Darwin" ] ; then
       # Always install the intel compiler redistributable libraries
       if [ "$INTEL_VERSION" == "14.0.4" ]; then
         wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
-        tar xvf l_ccompxe_2013_sp1.4.211_redist.tgz
+        tar xf l_ccompxe_2013_sp1.4.211_redist.tgz
         pushd l_ccompxe_2013_sp1.4.211_redist
         ./install.sh --eula --install-path ../install/intel
         popd
@@ -454,7 +453,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         if [ ! -f l_ccompxe_2015.0.090_redist.tgz ]; then
           wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
         fi
-        tar xvf l_ccompxe_2015.0.090_redist.tgz
+        tar xf l_ccompxe_2015.0.090_redist.tgz
         pushd l_ccompxe_2015.0.090_redist
         ./install.sh --eula --install-path ../install/intel
         popd
@@ -463,7 +462,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         if [ ! -f l_comp_lib_2016.1.150_comp.cpp_redist.tgz ]; then
           wget http://packages.zenotech.com/l_comp_lib_2016.1.150_comp.cpp_redist.tgz
         fi
-        tar xvf l_comp_lib_2016.1.150_comp.cpp_redist.tgz
+        tar xf l_comp_lib_2016.1.150_comp.cpp_redist.tgz
         pushd l_comp_lib_2016.1.150_comp.cpp_redist
         ./install.sh --eula --install-path ../install/intel
         popd
