@@ -17,6 +17,7 @@ centos:
             - gcc-gfortran
             - openssl-devel
             - numactl
+            - numactl-devel
 
 /etc/motd:
     file.append:
