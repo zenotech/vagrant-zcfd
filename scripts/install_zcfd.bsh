@@ -486,6 +486,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         ln -sF compilers_and_libraries_2016.2.181/linux/compiler install/intel/compiler
         ln -sF intel64_lin install/intel/compiler/lib/intel64
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
       else
         echo "Intel Compiler Version not recognised - missing redistributable library"
       fi
