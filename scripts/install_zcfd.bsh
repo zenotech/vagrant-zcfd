@@ -12,6 +12,7 @@ MAKE_TARGET=""
 MAKE_PARALLEL="6"
 MAKE_FAST="false"
 BUILD_OFFLINE="false"
+BUILD_IMPI="false"
 
 # Usage info
 show_help() {
@@ -30,7 +31,7 @@ Compile zCFD creating an installation tar file
     -f          Compile zCFD fast (ignores dependencies)
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
-
+    --impi      Compile using Intel MPI
 EOF
 }
 
@@ -94,6 +95,9 @@ while [ "$#" -gt 0 ]; do
             ;;
         -o|--offline)
             BUILD_OFFLINE="true"
+            ;;
+        --impi)
+            BUILD_IMPI="true"
             ;;
         --)              # End of all options.
             shift
@@ -269,6 +273,9 @@ if [ -f "$INTEL_COMPILER" ]; then
       ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
     fi
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
+  fi
+  if [ "$BUILD_IMPI" == "true"]; then
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON"
   fi
 else
   INTEL_COMPILER=
@@ -485,8 +492,8 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         rm -rf install/intel/compiler
         ln -sF compilers_and_libraries_2016.2.181/linux/compiler install/intel/compiler
         ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
       else
         echo "Intel Compiler Version not recognised - missing redistributable library"
       fi
