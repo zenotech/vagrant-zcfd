@@ -285,7 +285,7 @@ if [ -f "$INTEL_COMPILER" ]; then
     fi
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
   fi
-  if [ "$BUILD_IMPI" == "true"]; then
+  if [ "$BUILD_IMPI" == "true" ]; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON"
   fi
 else
