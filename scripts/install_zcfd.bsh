@@ -14,6 +14,7 @@ MAKE_FAST="false"
 BUILD_OFFLINE="false"
 BUILD_IMPI="false"
 BUILD_SOLVERS="all"
+BUILD_PHI="false"
 
 # Usage info
 show_help() {
@@ -32,7 +33,8 @@ Compile zCFD creating an installation tar file
     -f          Compile zCFD fast (ignores dependencies)
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
-    --impi      Compile using Intel MPI
+    --impi      Compile using Intel MPI    
+    --phi       Compile for Intel Xeon Phi
     --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
 EOF
 }
@@ -103,6 +105,9 @@ while [ "$#" -gt 0 ]; do
             ;;
         --impi)
             BUILD_IMPI="true"
+            ;;
+        --phi)
+            BUILD_PHI="true"
             ;;
         --)              # End of all options.
             shift
@@ -302,11 +307,13 @@ if [ -f "$INTEL_COMPILER" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-    # Should we build phi support
-    MIC_INFO=`type -p micinfo || true`
-    if [ -f "$MIC_INFO" ]; then
-      ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
-      ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+    if [ "$BUILD_PHI" == "true" ]; then
+      # Should we build phi support
+      MIC_INFO=`type -p micinfo || true`
+      if [ -f "$MIC_INFO" ]; then
+        ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
+      fi
     fi
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
   fi
