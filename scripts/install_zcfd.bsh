@@ -123,7 +123,7 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 
-echo $BUILD_SOLVERS
+#echo $BUILD_SOLVERS
 
 #echo $ZTARGET
 #echo $BUILD_LOCAL
@@ -146,6 +146,14 @@ function build_failed
 }
 
 trap build_failed EXIT
+
+pushd () {
+    command pushd "$@" > /dev/null
+}
+
+popd () {
+    command popd "$@" > /dev/null
+}
 
 # Check version of cmake
 #CMAKE_VER=`(cmake --version | grep 2.8) || true`
@@ -237,30 +245,32 @@ ZCFD_EXTRA_ARGS="-DBUILD_FV:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_DG:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-
 for s in $BUILD_SOLVERS
 do
-  echo $s
   if [[ "$s" == "euler" || "$s" == "all" ]]; then
     ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  else
+    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
   fi
   if [[ "$s" == "viscous" || "$s" == "all" ]]; then
     ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  else
+    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
   fi
   if [[ "$s" == "rans" || "$s" == "all" ]]; then
     ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  else
+    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
   fi
   if [[ "$s" == "les" || "$s" == "all" ]]; then
     ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
     ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  else
+    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=OFF;$ZCFD_EXTRA_ARGS"
   fi
 done
-
+#echo $ZCFD_EXTRA_ARGS
 
 ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
 
