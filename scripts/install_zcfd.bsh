@@ -13,6 +13,7 @@ MAKE_PARALLEL="6"
 MAKE_FAST="false"
 BUILD_OFFLINE="false"
 BUILD_IMPI="false"
+BUILD_SOLVERS="all"
 
 # Usage info
 show_help() {
@@ -32,6 +33,7 @@ Compile zCFD creating an installation tar file
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
     --impi      Compile using Intel MPI
+    --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
 EOF
 }
 
@@ -57,6 +59,9 @@ while [ "$#" -gt 0 ]; do
         --arch=)         # Handle the case of an empty --file=
             echo 'ERROR: Must specify a non-empty "--arch ARCH" argument.' >&2
             exit 1
+            ;;
+        --solvers=?*)
+            BUILD_SOLVERS=${1#*=} # Delete everything up to "=" and assign the remainder.
             ;;
         -j)
             if [ "$#" -gt 1 ]; then
@@ -112,6 +117,8 @@ while [ "$#" -gt 0 ]; do
 
     shift
 done
+
+echo $BUILD_SOLVERS
 
 #echo $ZTARGET
 #echo $BUILD_LOCAL
@@ -221,6 +228,24 @@ else
   fi
 fi
 
+for s in $BUILD_SOLVERS
+do
+  echo $s
+  if [[ "$s" == "euler" || "$s" == "all" ]]; then
+    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+  if [[ "$s" == "viscous" || "$s" == "all" ]]; then
+    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+  if [[ "$s" == "rans" || "$s" == "all" ]]; then
+    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+  if [[ "$s" == "les" || "$s" == "all" ]]; then
+    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
+    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  fi
+done
+
 ZCFD_EXTRA_ARGS="-DBUILD_FV:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_DG:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=ON;$ZCFD_EXTRA_ARGS"
@@ -230,7 +255,6 @@ ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
-
 
 ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
 
