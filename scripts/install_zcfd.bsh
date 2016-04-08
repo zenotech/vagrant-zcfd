@@ -584,6 +584,9 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   popd
   popd
   cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
+  # Delete cpack directories
+  rm -rf BUILD/${BUILD_DIR}/_CPack_Packages
+  rm -f BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz
 
 fi
 
