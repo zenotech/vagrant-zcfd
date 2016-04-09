@@ -334,7 +334,7 @@ if [ -f "$INTEL_COMPILER" ]; then
   fi
   if [ "$BUILD_IMPI" == "true" ]; then
     ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-impi"
-    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON"
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON -DMPI_VENDOR:STRING=INTELMPI"
   fi
 else
   INTEL_COMPILER=
@@ -413,7 +413,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
                     -DCMAKE_Fortran_COMPILER=${CRAYPE_DIR}/bin/ftn \
                     -DUSE_SYSTEM_bzip2:BOOL=ON -DUSE_SYSTEM_freetype:BOOL=ON \
                     -DUSE_SYSTEM_lbxml2:BOOL=ON -DUSE_SYSTEM_png:BOOL=ON -DUSE_SYSTEM_zlib:BOOL=ON \
-                    -DUSE_SYSTEM_hdf5:BOOL=ON -DUSE_SYSTEM_lapack:BOOL=ON -DUSE_SYSTEM_mpi:BOOL=ON \
+                    -DUSE_SYSTEM_hdf5:BOOL=ON -DUSE_SYSTEM_lapack:BOOL=ON -DUSE_SYSTEM_mpi:BOOL=ON -DMPI_VENDOR:STRING=CRAYMPI\
                     -DBLAS_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so \
                     -DLAPACK_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so"
   if [ "${MAKE_FAST}" == "true" ] ; then
