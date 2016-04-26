@@ -3,7 +3,6 @@
 # Terminate script on first error
 set -e
 
-
 BUILD_DEBUG="Release"
 BUILD_LOCAL="true"
 BUILD_CUDA="true"
@@ -14,11 +13,6 @@ MAKE_PARALLEL="6"
 MAKE_FAST="false"
 BUILD_OFFLINE="false"
 BUILD_IMPI="false"
-BUILD_SOLVERS="all"
-BUILD_PHI="false"
-UPDATE_ZCFD="false"
-
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Usage info
 show_help() {
@@ -37,10 +31,7 @@ Compile zCFD creating an installation tar file
     -f          Compile zCFD fast (ignores dependencies)
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
-    -u          Git pull zCFD before compiling
     --impi      Compile using Intel MPI
-    --phi       Compile for Intel Xeon Phi
-    --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
 EOF
 }
 
@@ -66,9 +57,6 @@ while [ "$#" -gt 0 ]; do
         --arch=)         # Handle the case of an empty --file=
             echo 'ERROR: Must specify a non-empty "--arch ARCH" argument.' >&2
             exit 1
-            ;;
-        --solvers=?*)
-            BUILD_SOLVERS=${1#*=} # Delete everything up to "=" and assign the remainder.
             ;;
         -j)
             if [ "$#" -gt 1 ]; then
@@ -111,12 +99,6 @@ while [ "$#" -gt 0 ]; do
         --impi)
             BUILD_IMPI="true"
             ;;
-        --phi)
-            BUILD_PHI="true"
-            ;;
-        -u)
-            UPDATE_ZCFD="true"
-            ;;
         --)              # End of all options.
             shift
             break
@@ -130,8 +112,6 @@ while [ "$#" -gt 0 ]; do
 
     shift
 done
-
-#echo $BUILD_SOLVERS
 
 #echo $ZTARGET
 #echo $BUILD_LOCAL
@@ -155,14 +135,6 @@ function build_failed
 
 trap build_failed EXIT
 
-pushd () {
-    command pushd "$@" > /dev/null
-}
-
-popd () {
-    command popd "$@" > /dev/null
-}
-
 # Check version of cmake
 #CMAKE_VER=`(cmake --version | grep 2.8) || true`
 #if [ ! -n "$CMAKE_VER" ]; then
@@ -179,13 +151,13 @@ pushd BUILD
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
-    ln -sf $SCRIPT_DIR/../../zCFDSuperBuild zCFDSuperBuild
+    ln -s ../../../zCFDSuperBuild zCFDSuperBuild
   fi
 fi
 
 # Clone the repo
 if [ "$BUILD_OFFLINE" == "false" ] ; then
-  if [ ! -e "zCFDSuperBuild" ] ; then
+  if [ ! -d "zCFDSuperBuild" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
   else
     pushd zCFDSuperBuild
@@ -193,30 +165,19 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
     popd
   fi
 
-  if [ "$UPDATE_ZCFD" == "true" ]; then
-    pushd zCFD
-    git pull
-    popd
-  fi
-
   # Checkout branch
   pushd zCFDSuperBuild
-  git checkout v2016.1.0
+  git checkout poly
+  GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
   popd
 fi
-
-# Get GIT BRANCH info
-pushd zCFDSuperBuild
-GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-popd
-echo "branch: ${GIT_BRANCH}"
 
 #git rev-parse --abbrev-ref HEAD | sed 's/^.*[^0-9]\([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/'
 
 CMAKE_EXTRA_ARGS=""
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFD ] ; then
-    ln -s $SCRIPT_DIR/../../zCFD zCFD
+    ln -s ../../../zCFD zCFD
   fi
   tar zcf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
@@ -259,37 +220,6 @@ else
     echo "Defaulting to SSE"
   fi
 fi
-
-ZCFD_EXTRA_ARGS="-DBUILD_FV:BOOL=ON;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_DG:BOOL=ON;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=ON;$ZCFD_EXTRA_ARGS"
-
-for s in $BUILD_SOLVERS
-do
-  if [[ "$s" == "euler" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-  fi
-  if [[ "$s" == "viscous" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-  fi
-  if [[ "$s" == "rans" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-  fi
-  if [[ "$s" == "les" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
-    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-  fi
-done
-#echo $ZCFD_EXTRA_ARGS
 
 ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
 
@@ -336,19 +266,16 @@ if [ -f "$INTEL_COMPILER" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
-    if [ "$BUILD_PHI" == "true" ]; then
-      # Should we build phi support
-      MIC_INFO=`type -p micinfo || true`
-      if [ -f "$MIC_INFO" ]; then
-        ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
-        ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
-      fi
+    # Should we build phi support
+    MIC_INFO=`type -p micinfo || true`
+    if [ -f "$MIC_INFO" ]; then
+      ZCFD_PACKAGE_NAME="zCFD-icc-phi-$CPU_FLAG"
+      ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;-DBUILD_PHI:BOOL=ON;$ZCFD_EXTRA_ARGS"
     fi
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DBOOST_INTEL_TOOLSET:BOOL=ON"
   fi
   if [ "$BUILD_IMPI" == "true" ]; then
-    ZCFD_PACKAGE_NAME="${ZCFD_PACKAGE_NAME}-impi"
-    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON -DMPI_VENDOR:STRING=INTELMPI"
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DUSE_SYSTEM_mpi:BOOL=ON"
   fi
 else
   INTEL_COMPILER=
@@ -393,7 +320,7 @@ if [ ! -f "$CMAKE_EXE" ]; then
 fi
 
 if [ "${UNAME}" == "Darwin" ] ; then
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11"
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11" 
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
   -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
@@ -427,13 +354,13 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
                     -DCMAKE_Fortran_COMPILER=${CRAYPE_DIR}/bin/ftn \
                     -DUSE_SYSTEM_bzip2:BOOL=ON -DUSE_SYSTEM_freetype:BOOL=ON \
                     -DUSE_SYSTEM_lbxml2:BOOL=ON -DUSE_SYSTEM_png:BOOL=ON -DUSE_SYSTEM_zlib:BOOL=ON \
-                    -DUSE_SYSTEM_hdf5:BOOL=ON -DUSE_SYSTEM_lapack:BOOL=ON -DUSE_SYSTEM_mpi:BOOL=ON -DMPI_VENDOR:STRING=CRAYMPI\
+                    -DUSE_SYSTEM_hdf5:BOOL=ON -DUSE_SYSTEM_lapack:BOOL=ON -DUSE_SYSTEM_mpi:BOOL=ON \
                     -DBLAS_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so \
                     -DLAPACK_LIBRARIES:FILEPATH=${CRAY_LIBSCI_PREFIX_DIR}/lib/libsci_gnu.so"
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
     ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  fi
+  fi  
 else
   # For Linux
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
@@ -598,9 +525,6 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   popd
   popd
   cp BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz .
-  # Delete cpack directories
-  rm -rf BUILD/${BUILD_DIR}/_CPack_Packages
-  rm -f BUILD/${BUILD_DIR}/${ZCFD_PACKAGE_NAME}*.tar.gz
 
 fi
 
