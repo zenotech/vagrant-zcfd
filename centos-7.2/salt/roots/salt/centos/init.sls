@@ -18,6 +18,8 @@ centos:
             - openssl-devel
             - numactl
             - numactl-devel
+            - screen
+            - wget
 
 /etc/motd:
     file.append:
