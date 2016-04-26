@@ -201,7 +201,7 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
 
   # Checkout branch
   pushd zCFDSuperBuild
-  git checkout v2016.1.1
+  git checkout develop
   popd
 fi
 
