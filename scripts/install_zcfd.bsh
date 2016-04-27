@@ -3,6 +3,7 @@
 # Terminate script on first error
 set -e
 
+
 BUILD_DEBUG="Release"
 BUILD_LOCAL="true"
 BUILD_CUDA="true"
@@ -16,6 +17,8 @@ BUILD_IMPI="false"
 BUILD_SOLVERS="all"
 BUILD_PHI="false"
 UPDATE_ZCFD="false"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Usage info
 show_help() {
@@ -35,7 +38,7 @@ Compile zCFD creating an installation tar file
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
     -u          Git pull zCFD before compiling
-    --impi      Compile using Intel MPI    
+    --impi      Compile using Intel MPI
     --phi       Compile for Intel Xeon Phi
     --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
 EOF
@@ -187,13 +190,13 @@ pushd BUILD
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
-    ln -s ../../../zCFDSuperBuild zCFDSuperBuild
+    ln -sf $SCRIPT_DIR/../../zCFDSuperBuild zCFDSuperBuild
   fi
 fi
 
 # Clone the repo
 if [ "$BUILD_OFFLINE" == "false" ] ; then
-  if [ ! -d "zCFDSuperBuild" ] ; then
+  if [ ! -e "zCFDSuperBuild" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
   fi
 
@@ -208,7 +211,7 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
 
   # Checkout branch
   pushd zCFDSuperBuild
-  git checkout poly
+  git checkout develop
   popd
 fi
 
@@ -223,7 +226,7 @@ echo "branch: ${GIT_BRANCH}"
 CMAKE_EXTRA_ARGS=""
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFD ] ; then
-    ln -s ../../../zCFD zCFD
+    ln -s $SCRIPT_DIR/../../zCFD zCFD
   fi
   tar zcf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
@@ -400,7 +403,7 @@ if [ ! -f "$CMAKE_EXE" ]; then
 fi
 
 if [ "${UNAME}" == "Darwin" ] ; then
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11" 
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11"
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
   -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
@@ -440,7 +443,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
     ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  fi  
+  fi
 else
   # For Linux
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
