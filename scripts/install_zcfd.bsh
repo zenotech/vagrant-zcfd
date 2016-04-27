@@ -160,6 +160,17 @@ popd () {
     command popd "$@" > /dev/null
 }
 
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+printr (){
+  printf "${RED}${@}${NC}\n"
+}
+printb (){
+  printf "${BLUE}${@}${NC}\n"
+}
+
 # Check version of cmake
 #CMAKE_VER=`(cmake --version | grep 2.8) || true`
 #if [ ! -n "$CMAKE_VER" ]; then
@@ -169,7 +180,7 @@ popd () {
 
 UNAME=`uname`
 
-echo "Building zCFD on ${UNAME}"
+printr "Building zCFD on ${UNAME}"
 
 mkdir -p BUILD
 pushd BUILD
@@ -184,16 +195,15 @@ fi
 if [ "$BUILD_OFFLINE" == "false" ] ; then
   if [ ! -d "zCFDSuperBuild" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
-  else
-    pushd zCFDSuperBuild
-    git pull
-    popd
   fi
 
   if [ "$UPDATE_ZCFD" == "true" ]; then
     pushd zCFD
     git pull
     popd
+    pushd zCFDSuperBuild
+    git pull
+    popd    
   fi
 
   # Checkout branch
@@ -242,7 +252,7 @@ if [ -n "$ZTARGET" ]; then
     exit 1
   fi
 else
-  echo "Attempting to autodetect architecture type"
+  printr "Attempting to autodetect architecture type"
   CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
@@ -548,7 +558,8 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         rm -rf install/intel/compiler
         ln -sF compilers_and_libraries_2016.1.150/linux/compiler install/intel/compiler
         ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
       elif [ "$INTEL_VERSION" == "16.0.2" ]; then
         if [ ! -f l_comp_lib_2016.2.181_comp.cpp_redist.tgz ]; then
           wget http://packages.zenotech.com/l_comp_lib_2016.2.181_comp.cpp_redist.tgz
