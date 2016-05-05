@@ -501,8 +501,11 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   ../install/bin/python setup.py install
   popd
 
+  # Upgrade pip
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org pip
+
   # Install yolk
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
 
   # Install mpi4py
   #./install/bin/python setup.py build --mpicc=cc --mpicxx=CC --mpif95=ftn
@@ -513,7 +516,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 #export FC=ftn
 
   # Install requirements
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
     install/bin/python install/bin/pip install pycuda==2014.1
