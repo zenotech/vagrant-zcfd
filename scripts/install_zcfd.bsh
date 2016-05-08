@@ -454,7 +454,7 @@ else
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
