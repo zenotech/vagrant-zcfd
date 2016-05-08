@@ -1,6 +1,8 @@
 vagrant-zcfd
 ============
 
+[![Join the chat at https://gitter.im/zenotech/vagrant-zcfd](https://badges.gitter.im/zenotech/vagrant-zcfd.svg)](https://gitter.im/zenotech/vagrant-zcfd?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Vagrant config scripts to build a server for the compilation of zCFD
 
 Dependencies
