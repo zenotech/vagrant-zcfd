@@ -450,7 +450,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=${CRAYPE_DIR}/bin/cc \
                     -DCMAKE_CXX_COMPILER=${CRAYPE_DIR}/bin/CC \
@@ -526,6 +526,9 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 
   # Install yolk
   install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+
+  # Install gitterpy
+  install/bin/python install/bin/pip install --upgrade https://github.com/graycatlabs/gitterpy/zipball/master
 
   # Install mpi4py
   #./install/bin/python setup.py build --mpicc=cc --mpicxx=CC --mpif95=ftn
