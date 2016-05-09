@@ -142,14 +142,34 @@ done
 function build_success
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+
+  # Check if GITTER_TOKEN is set
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build complete')
+END
+fi
+
   echo 'Build zCFD - Complete'
 }
 
 function build_failed
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build failed')
+END
+fi
+
   echo 'Build zCFD - Failed'
 }
 
@@ -409,7 +429,7 @@ if [ "${UNAME}" == "Darwin" ] ; then
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
   -DVTK_USE_SYSTEM_HDF5:BOOL=ON;\
   -DXDMF_BUILD_MPI:BOOL=ON;\
-  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;"
+  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
   ZCFD_EXTRA_ARGS="-DDISABLE_LM:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
