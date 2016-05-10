@@ -3,6 +3,7 @@
 # Terminate script on first error
 set -e
 
+
 BUILD_DEBUG="Release"
 BUILD_LOCAL="true"
 BUILD_CUDA="true"
@@ -16,6 +17,8 @@ BUILD_IMPI="false"
 BUILD_SOLVERS="all"
 BUILD_PHI="false"
 UPDATE_ZCFD="false"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Usage info
 show_help() {
@@ -35,7 +38,7 @@ Compile zCFD creating an installation tar file
     -g          Compile using gcc
     -o          Compile offline (no online access to Git repository)
     -u          Git pull zCFD before compiling
-    --impi      Compile using Intel MPI    
+    --impi      Compile using Intel MPI
     --phi       Compile for Intel Xeon Phi
     --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
 EOF
@@ -139,14 +142,34 @@ done
 function build_success
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+
+  # Check if GITTER_TOKEN is set
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build complete')
+END
+fi
+
   echo 'Build zCFD - Complete'
 }
 
 function build_failed
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build failed')
+END
+fi
+
   echo 'Build zCFD - Failed'
 }
 
@@ -160,6 +183,17 @@ popd () {
     command popd "$@" > /dev/null
 }
 
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+printr (){
+  printf "${RED}${@}${NC}\n"
+}
+printb (){
+  printf "${BLUE}${@}${NC}\n"
+}
+
 # Check version of cmake
 #CMAKE_VER=`(cmake --version | grep 2.8) || true`
 #if [ ! -n "$CMAKE_VER" ]; then
@@ -169,31 +203,30 @@ popd () {
 
 UNAME=`uname`
 
-echo "Building zCFD on ${UNAME}"
+printr "Building zCFD on ${UNAME}"
 
 mkdir -p BUILD
 pushd BUILD
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
-    ln -s ../../../zCFDSuperBuild zCFDSuperBuild
+    ln -sf $SCRIPT_DIR/../../zCFDSuperBuild zCFDSuperBuild
   fi
 fi
 
 # Clone the repo
 if [ "$BUILD_OFFLINE" == "false" ] ; then
-  if [ ! -d "zCFDSuperBuild" ] ; then
+  if [ ! -e "zCFDSuperBuild" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
-  else
-    pushd zCFDSuperBuild
-    git pull
-    popd
   fi
 
   if [ "$UPDATE_ZCFD" == "true" ]; then
     pushd zCFD
     git pull
     popd
+    pushd zCFDSuperBuild
+    git pull
+    popd    
   fi
 
   # Checkout branch
@@ -213,7 +246,7 @@ echo "branch: ${GIT_BRANCH}"
 CMAKE_EXTRA_ARGS=""
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFD ] ; then
-    ln -s ../../../zCFD zCFD
+    ln -s $SCRIPT_DIR/../../zCFD zCFD
   fi
   tar zcf zCFD.tar.gz zCFD/*
   BUILD_URL=`pwd`/zCFD.tar.gz
@@ -242,7 +275,7 @@ if [ -n "$ZTARGET" ]; then
     exit 1
   fi
 else
-  echo "Attempting to autodetect architecture type"
+  printr "Attempting to autodetect architecture type"
   CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
@@ -395,13 +428,13 @@ if [ ! -f "$CMAKE_EXE" ]; then
 fi
 
 if [ "${UNAME}" == "Darwin" ] ; then
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11" 
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11"
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
   -DPYTHON_EXECUTABLE:FILEPATH=${PREFIX}/bin/python;\
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
   -DVTK_USE_SYSTEM_HDF5:BOOL=ON;\
   -DXDMF_BUILD_MPI:BOOL=ON;\
-  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;"
+  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
   ZCFD_EXTRA_ARGS="-DDISABLE_LM:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
@@ -422,7 +455,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=${CRAYPE_DIR}/bin/cc \
                     -DCMAKE_CXX_COMPILER=${CRAYPE_DIR}/bin/CC \
@@ -435,7 +468,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
     ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  fi  
+  fi
 else
   # For Linux
   PV_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};\
@@ -446,7 +479,7 @@ else
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
@@ -493,8 +526,14 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   ../install/bin/python setup.py install
   popd
 
+  # Upgrade pip
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org pip
+
   # Install yolk
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+
+  # Install gitterpy
+  install/bin/python install/bin/pip install --upgrade https://github.com/graycatlabs/gitterpy/zipball/master
 
   # Install mpi4py
   #./install/bin/python setup.py build --mpicc=cc --mpicxx=CC --mpif95=ftn
@@ -505,7 +544,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 #export FC=ftn
 
   # Install requirements
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
     install/bin/python install/bin/pip install pycuda==2014.1
@@ -553,7 +592,8 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         rm -rf install/intel/compiler
         ln -sF compilers_and_libraries_2016.1.150/linux/compiler install/intel/compiler
         ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
       elif [ "$INTEL_VERSION" == "16.0.2" ]; then
         if [ ! -f l_comp_lib_2016.2.181_comp.cpp_redist.tgz ]; then
           wget http://packages.zenotech.com/l_comp_lib_2016.2.181_comp.cpp_redist.tgz
