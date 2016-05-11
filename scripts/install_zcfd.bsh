@@ -311,6 +311,11 @@ do
   else
     ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
   fi
+  if [[ "$s" == "dgmenterdes" || "$s" == "all" ]]; then
+    ZCFD_EXTRA_ARGS="-DBUILD_DGMENTER_DES:BOOL=ON;$ZCFD_EXTRA_ARGS"
+  else
+    ZCFD_EXTRA_ARGS="-DBUILD_DGMENTER_DES:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+  fi
   if [[ "$s" == "les" || "$s" == "all" ]]; then
     ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
     ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
