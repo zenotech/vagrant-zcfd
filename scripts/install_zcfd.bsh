@@ -555,7 +555,29 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     rm -f "${P}.tmp"
   done
 
+  # Function to install intel compiler redistributable
+  function install_intel2016
+  {
+    stub = $1
+    release = $2
+    if [ ! -f ${stub}.tgz ]; then
+      wget http://packages.zenotech.com/${stub}.tgz
+    fi
+    tar xf ${stub}.tgz
+    pushd ${stub}
+    ./install.sh --eula --install-path ../install/intel
+    popd
+    # Fix up as Intel has changed install path
+    rm -rf install/intel/compiler/lib/intel64
+    rm -rf install/intel/compiler
+    ln -sF compilers_and_libraries_${release}/linux/compiler install/intel/compiler
+    ln -sF intel64_lin install/intel/compiler/lib/intel64
+    cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+    cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
+  }
+
   if [ -f "$INTEL_COMPILER" ]; then
+    # https://software.intel.com/en-us/articles/intelr-composer-redistributable-libraries-by-version
     if [ "${UNAME}" != "Darwin" ] ; then
       # Always install the intel compiler redistributable libraries
       if [ "$INTEL_VERSION" == "14.0.4" ]; then
@@ -575,35 +597,11 @@ if [ "${MAKE_FAST}" == "false" ] ; then
         popd
         cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
       elif [ "$INTEL_VERSION" == "16.0.1" ]; then
-        if [ ! -f l_comp_lib_2016.1.150_comp.cpp_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_comp_lib_2016.1.150_comp.cpp_redist.tgz
-        fi
-        tar xf l_comp_lib_2016.1.150_comp.cpp_redist.tgz
-        pushd l_comp_lib_2016.1.150_comp.cpp_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        # Fix up as Intel has changed install path
-        rm -rf install/intel/compiler/lib/intel64
-        rm -rf install/intel/compiler
-        ln -sF compilers_and_libraries_2016.1.150/linux/compiler install/intel/compiler
-        ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
+        install_intel2016 l_comp_lib_2016.1.150_comp.cpp_redist 2016.1.150
       elif [ "$INTEL_VERSION" == "16.0.2" ]; then
-        if [ ! -f l_comp_lib_2016.2.181_comp.cpp_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_comp_lib_2016.2.181_comp.cpp_redist.tgz
-        fi
-        tar xf l_comp_lib_2016.2.181_comp.cpp_redist.tgz
-        pushd l_comp_lib_2016.2.181_comp.cpp_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        # Fix up as Intel has changed install path
-        rm -rf install/intel/compiler/lib/intel64
-        rm -rf install/intel/compiler
-        ln -sF compilers_and_libraries_2016.2.181/linux/compiler install/intel/compiler
-        ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
+        install_intel2016 l_comp_lib_2016.2.181_comp.cpp_redist 2016.2.181
+      elif [ "$INTEL_VERSION" == "16.0.3" ]; then
+        install_intel2016 l_comp_lib_2016.3.210_comp.cpp_redist 2016.3.210
       else
         echo "Intel Compiler Version not recognised - missing redistributable library"
       fi
