@@ -2,12 +2,14 @@
 
 set -e
 
+SCRIPT_NAME=$(basename $0)
+
 # Start multiple screen windows
 screen -AmdS zbuild -t default bash
 screen -S zbuild -X screen -t screen_build 
 
 # build
-if [ "$0" == "screen_build_cfms.bsh" ]; then
+if [ "$SCRIPT_NAME" == "screen_build_cfms.bsh" ]; then
   echo "Building of CFMS"
   screen -S zbuild -p 1 -X stuff $'module load gcc/gcc-4.9.2 cuda/cuda7.5\r'
   screen -S zbuild -p 1 -X stuff $'source /opt/intel/compilers_and_libraries_2016.1.150/linux/bin/compilervars.sh intel64\r'
