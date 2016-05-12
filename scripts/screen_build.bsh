@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Start multiple screen windows
+screen -AmdS zbuild -t default bash
+screen -S zbuild -X screen -t screen_build 
+
+# build
+screen -S zbuild -p 1 -X stuff $'eval "$(ssh-agent -s)"\r'
+screen -S zbuild -p 1 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
+screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh $*\r'
+
