@@ -1,11 +1,19 @@
 #!/bin/bash
 
+set -e
+
 # Start multiple screen windows
 screen -AmdS zbuild -t default bash
 screen -S zbuild -X screen -t screen_build 
 
 # build
+if [ "$0" == "screen_build_cfms.bsh" ]; then
+  echo "Building of CFMS"
+  screen -S zbuild -p 1 -X stuff $'module load gcc/gcc-4.9.2 cuda/cuda7.5\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/compilers_and_libraries_2016.1.150/linux/bin/compilervars.sh intel64\r'
+fi
 screen -S zbuild -p 1 -X stuff $'eval "$(ssh-agent -s)"\r'
 screen -S zbuild -p 1 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
-screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh $*\r'
+screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh '"$*"$'\r'
 
+echo "Use screen -r zbuild to view output"
