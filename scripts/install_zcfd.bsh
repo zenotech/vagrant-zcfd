@@ -563,8 +563,8 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   # Function to install intel compiler redistributable
   function install_intel2016
   {
-    stub = $1
-    release = $2
+    stub=$1
+    release=$2
     if [ ! -f ${stub}.tgz ]; then
       wget http://packages.zenotech.com/${stub}.tgz
     fi
