@@ -150,7 +150,7 @@ python << END
 import gitterpy
 gitter_token = "${GITTER_TOKEN}"
 gitter = gitterpy.Gitter(gitter_token)
-gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build complete')
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build complete on: ${HOSTNAME}')
 END
 fi
 
@@ -166,7 +166,7 @@ python << END
 import gitterpy
 gitter_token = "${GITTER_TOKEN}"
 gitter = gitterpy.Gitter(gitter_token)
-gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build failed')
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build failed on: ${HOSTNAME}')
 END
 fi
 
