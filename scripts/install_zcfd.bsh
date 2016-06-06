@@ -509,8 +509,11 @@ $CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
 
-#make -j1 VERBOSE=${verbose} $MAKE_TARGET
-make -j1 $MAKE_TARGET
+if [ "${verbose}" == "true" ] ; then
+  make -j1 VERBOSE=true $MAKE_TARGET
+else
+  make -j1 $MAKE_TARGET
+fi
 
 if [ "${MAKE_FAST}" == "false" ] ; then
 
