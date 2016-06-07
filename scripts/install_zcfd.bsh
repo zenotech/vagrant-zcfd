@@ -548,6 +548,11 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 
   # Install requirements
   install/bin/python install/bin/pip install --upgrade --no-deps --force-reinstall --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  # Install notebook
+  install/bin/python install/bin/pip install --upgrade --no-deps --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/notebook-requirements.txt
+
+  install/bin/python install/bin/pip install --upgrade --no-deps --force-reinstall --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org jupyter
+
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
     install/bin/python install/bin/pip install pycuda==2014.1
