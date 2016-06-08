@@ -194,19 +194,14 @@ printb (){
   printf "${BLUE}${@}${NC}\n"
 }
 
-# Check version of cmake
-#CMAKE_VER=`(cmake --version | grep 2.8) || true`
-#if [ ! -n "$CMAKE_VER" ]; then
-#  echo "CMake 2.8 not found"
-#  exit 1
-#fi
-
 UNAME=`uname`
 
 printr "Building zCFD on ${UNAME}"
 
 mkdir -p BUILD
 pushd BUILD
+
+if [ ! "BUILD_FAST" == "true" ]; then
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
@@ -233,6 +228,8 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
   pushd zCFDSuperBuild
   git checkout poly
   popd
+fi
+
 fi
 
 # Get GIT BRANCH info
@@ -326,7 +323,7 @@ do
 done
 #echo $ZCFD_EXTRA_ARGS
 
-ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};-DCUDA_HOST_COMPILER:STRING=`which g++`;-DCUDA_PROPAGATE_HOST_FLAGS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
 
 # For release strip files
 if [ "${BUILD_DEBUG}" == "Release" ]; then
@@ -351,17 +348,14 @@ if [ "$BUILD_CUDA" == "true" ]; then
   if [ "${UNAME}" == "Darwin" ] ; then
     CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
   fi
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
 else
   CUDA_COMPILER=
 fi
-if [ -f "$CUDA_COMPILER" ]; then
-  ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
-  # build for fermi and kepler
-  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
-else
-  ZCFD_EXTRA_ARGS="-DBUILD_CUDA:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-fi
+
+# build for fermi and kepler
+ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
 # Check for presence of Intel compiler
 INTEL_COMPILER=`type -p icc || true`
@@ -440,10 +434,6 @@ if [ "${UNAME}" == "Darwin" ] ; then
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
   fi
-  #if [ ! -f "$CUDA_COMPILER" ]; then
-  #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-  #  ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
-  #fi
 elif [[ -n "$CRAYOS_VERSION" ]]; then
   #statements
   # For Linux
@@ -486,24 +476,13 @@ else
     ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
   fi
 
-  #if [ ! -f "$CUDA_COMPILER" ]; then
-#  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-  #ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
-  #fi
 fi
 
 $CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
-      -DENABLE_boost:BOOL=ON \
-      -DENABLE_lapack:BOOL=ON \
-      -DENABLE_ffmpeg:BOOL=ON \
-      -DENABLE_hdf5:BOOL=ON \
-      -DENABLE_mpi:BOOL=ON \
-      -DENABLE_osmesa:BOOL=ON \
-      -DENABLE_python:BOOL=ON \
-      -DENABLE_paraviewsdk:BOOL=ON\
-      -DENABLE_paraview:BOOL=ON \
       -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
+      -DENABLE_ffmpeg:BOOL=ON \
+      -DENABLE_osmesa:BOOL=ON \
       -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ${CMAKE_EXTRA_ARGS} \
