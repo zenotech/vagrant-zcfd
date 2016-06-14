@@ -355,11 +355,16 @@ if [ "$BUILD_CUDA" == "true" ]; then
 
   if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
-  else
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
   fi
 else
   CUDA_COMPILER=
+fi
+
+if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfd:BOOL=OFF"
+else
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfd:BOOL=ON"
 fi
 
 # build for fermi and kepler
@@ -492,7 +497,6 @@ $CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
       -DENABLE_ffmpeg:BOOL=ON \
       -DENABLE_osmesa:BOOL=ON \
-      -DENABLE_zcfd:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
