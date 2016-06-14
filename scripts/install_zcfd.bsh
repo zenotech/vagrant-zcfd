@@ -17,6 +17,7 @@ BUILD_IMPI="false"
 BUILD_SOLVERS="all"
 BUILD_PHI="false"
 UPDATE_ZCFD="false"
+BUILD_CUDA_ONLY="false"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -95,6 +96,9 @@ while [ "$#" -gt 0 ]; do
             ;;
         -c|--cpuonly)
             BUILD_CUDA="false"
+            ;;
+        --cudaonly)
+            BUILD_CUDA_ONLY="true"
             ;;
         -g|--gcconly)
             BUILD_INTEL="false"
@@ -348,7 +352,12 @@ if [ "$BUILD_CUDA" == "true" ]; then
   if [ "${UNAME}" == "Darwin" ] ; then
     CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
   fi
-  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
+
+  if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
+    ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
+  else
+    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
+  fi
 else
   CUDA_COMPILER=
 fi
