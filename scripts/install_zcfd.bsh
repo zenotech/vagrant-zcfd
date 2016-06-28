@@ -225,7 +225,7 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
     popd
     pushd zCFDSuperBuild
     git pull
-    popd    
+    popd
   fi
 
   # Checkout branch
@@ -353,9 +353,9 @@ if [ "$BUILD_CUDA" == "true" ]; then
     CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
   fi
 
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
   if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
-    CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
   fi
 else
   CUDA_COMPILER=
