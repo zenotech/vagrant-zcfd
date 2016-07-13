@@ -293,7 +293,7 @@ fi
 
 ZCFD_EXTRA_ARGS="-DBUILD_FV:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_DG:BOOL=ON;$ZCFD_EXTRA_ARGS"
-ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=ON;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=OFF;$ZCFD_EXTRA_ARGS"
 
 BUILD_EULER="OFF"
 BUILD_VISCOUS="OFF"
@@ -550,7 +550,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
-    install/bin/python install/bin/pip install pycuda==2014.1
+    install/bin/python install/bin/pip install pycuda
     #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
     cp -r "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
   fi
