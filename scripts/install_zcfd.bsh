@@ -619,6 +619,9 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   # Create empty directory as CPACK expects a directory
   mkdir -p install/intel
 
+  # Create empty directory as CPACK expects a directory
+  mkdir -p install/lic
+
   if [ "${UNAME}" != "Darwin" ] ; then
     set +e
     # For gcc compile need to copy libgomp.so
