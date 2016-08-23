@@ -384,6 +384,7 @@ if [ -f "$INTEL_COMPILER" ]; then
   INTEL_VERSION=`icc -dumpversion`
   if [ "$BUILD_INTEL" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+    CMAKE_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$CMAKE_EXTRA_ARGS"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
     if [ "$BUILD_PHI" == "true" ]; then
