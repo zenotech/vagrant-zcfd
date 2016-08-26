@@ -589,7 +589,7 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     ln -sF compilers_and_libraries_${release}/linux/compiler install/intel/compiler
     ln -sF intel64_lin install/intel/compiler/lib/intel64
     mkdir -p install/intel/mkl/lib/intel64
-    cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl/lib/intel64 install/intel/mkl/lib/intel64
+    cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl/lib/intel64 install/intel/mkl/lib/
     if [ ! -f ${mpi_redist}.tgz ] ; then
 	wget http://packages.zenotech.com/${mpi_redist}.tgz 
     fi
