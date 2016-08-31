@@ -205,7 +205,7 @@ printr "Building zCFD on ${UNAME}"
 mkdir -p BUILD
 pushd BUILD
 
-if [ ! "BUILD_FAST" == "true" ]; then
+#if [ ! "MAKE_FAST" == "true" ]; then
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
@@ -234,7 +234,7 @@ if [ "$BUILD_OFFLINE" == "false" ] ; then
   popd
 fi
 
-fi
+#fi
 
 # Get GIT BRANCH info
 pushd zCFDSuperBuild
@@ -384,7 +384,7 @@ if [ -f "$INTEL_COMPILER" ]; then
   INTEL_VERSION=`icc -dumpversion`
   if [ "$BUILD_INTEL" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
-    CMAKE_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$CMAKE_EXTRA_ARGS"
+    CMAKE_EXTRA_ARGS="-DINTEL_CC:BOOL=ON $CMAKE_EXTRA_ARGS"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
     if [ "$BUILD_PHI" == "true" ]; then
