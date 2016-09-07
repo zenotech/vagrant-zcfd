@@ -17,6 +17,7 @@ BUILD_IMPI="false"
 BUILD_SOLVERS="all"
 BUILD_PHI="false"
 UPDATE_ZCFD="false"
+BUILD_CUDA_ONLY="false"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -40,7 +41,7 @@ Compile zCFD creating an installation tar file
     -u          Git pull zCFD before compiling
     --impi      Compile using Intel MPI
     --phi       Compile for Intel Xeon Phi
-    --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les")
+    --solvers   Compile specific solvers (e.g. --solvers="euler viscous rans les dgmenterdes")
 EOF
 }
 
@@ -96,6 +97,9 @@ while [ "$#" -gt 0 ]; do
         -c|--cpuonly)
             BUILD_CUDA="false"
             ;;
+        --cudaonly)
+            BUILD_CUDA_ONLY="true"
+            ;;
         -g|--gcconly)
             BUILD_INTEL="false"
             ;;
@@ -142,14 +146,34 @@ done
 function build_success
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build complete" https://api.pushover.net/1/messages.json
+
+  # Check if GITTER_TOKEN is set
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build complete on: ${HOSTNAME}')
+END
+fi
+
   echo 'Build zCFD - Complete'
 }
 
 function build_failed
 {
   # Send a pushover.net notification
-  curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: ${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+  #curl -s --form-string "token=aY8kBmCv4VECuPLST79CSouUQL5xFw" --form-string "user=uNsCqiK4snpgpN4qkdken8v2RP5fwh" --form-string "message=Package: #${ZCFD_PACKAGE_NAME} build failed" https://api.pushover.net/1/messages.json
+if [[ -n ${GITTER_TOKEN} ]] ; then
+python << END
+import gitterpy
+gitter_token = "${GITTER_TOKEN}"
+gitter = gitterpy.Gitter(gitter_token)
+gitter.sendMessage('zenotech','Package: ${ZCFD_PACKAGE_NAME} build failed on: ${HOSTNAME}')
+END
+fi
+
   echo 'Build zCFD - Failed'
 }
 
@@ -163,19 +187,25 @@ popd () {
     command popd "$@" > /dev/null
 }
 
-# Check version of cmake
-#CMAKE_VER=`(cmake --version | grep 2.8) || true`
-#if [ ! -n "$CMAKE_VER" ]; then
-#  echo "CMake 2.8 not found"
-#  exit 1
-#fi
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+printr (){
+  printf "${RED}${@}${NC}\n"
+}
+printb (){
+  printf "${BLUE}${@}${NC}\n"
+}
 
 UNAME=`uname`
 
-echo "Building zCFD on ${UNAME}"
+printr "Building zCFD on ${UNAME}"
 
 mkdir -p BUILD
 pushd BUILD
+
+if [ ! "BUILD_FAST" == "true" ]; then
 
 if [ "$BUILD_LOCAL" == "true" ] ; then
   if [ ! -d zCFDSuperBuild ] ; then
@@ -187,22 +217,23 @@ fi
 if [ "$BUILD_OFFLINE" == "false" ] ; then
   if [ ! -e "zCFDSuperBuild" ] ; then
     git clone git@github.com:zenotech/zCFDSuperBuild.git
-  else
-    pushd zCFDSuperBuild
-    git pull
-    popd
   fi
 
   if [ "$UPDATE_ZCFD" == "true" ]; then
     pushd zCFD
     git pull
     popd
+    pushd zCFDSuperBuild
+    git pull
+    popd
   fi
 
   # Checkout branch
   pushd zCFDSuperBuild
-  git checkout v2016.1.1
+  git checkout develop 
   popd
+fi
+
 fi
 
 # Get GIT BRANCH info
@@ -245,7 +276,7 @@ if [ -n "$ZTARGET" ]; then
     exit 1
   fi
 else
-  echo "Attempting to autodetect architecture type"
+  printr "Attempting to autodetect architecture type"
   CPU_FLAG=`(cat /proc/cpuinfo | grep flags | grep -q avx && echo $?) || true`
   if [ "$CPU_FLAG" == "0" ] ; then
     # AVX
@@ -264,34 +295,46 @@ ZCFD_EXTRA_ARGS="-DBUILD_FV:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_DG:BOOL=ON;$ZCFD_EXTRA_ARGS"
 ZCFD_EXTRA_ARGS="-DBUILD_PRECOND:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
+BUILD_EULER="OFF"
+BUILD_VISCOUS="OFF"
+BUILD_RANS="OFF"
+BUILD_LES="OFF"
+BUILD_DGMENTER_DES="OFF"
+BUILD_DES="OFF"
 for s in $BUILD_SOLVERS
 do
   if [[ "$s" == "euler" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+    BUILD_EULER="ON"
   fi
   if [[ "$s" == "viscous" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+    BUILD_VISCOUS="ON"
   fi
   if [[ "$s" == "rans" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+    BUILD_RANS="ON"
+  fi
+  if [[ "$s" == "dgmenterdes" || "$s" == "all" ]]; then
+    BUILD_DGMENTER_DES="ON"
   fi
   if [[ "$s" == "les" || "$s" == "all" ]]; then
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=ON;$ZCFD_EXTRA_ARGS"
-    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  else
-    ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
-    ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+    BUILD_LES="ON"
+  fi
+  if [[ "$s" == "des" || "$s" == "all" ]]; then
+    BUILD_DES="ON"
   fi
 done
+
+ZCFD_EXTRA_ARGS="-DBUILD_EULER:BOOL=$BUILD_EULER;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_VISCOUS:BOOL=$BUILD_VISCOUS;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_MENTER:BOOL=$BUILD_RANS;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_MENTER_DES:BOOL=$BUILD_DES;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_MENTER_DDES:BOOL=$BUILD_DES;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_MENTER_SAS:BOOL=$BUILD_LES;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_LES_WALE:BOOL=$BUILD_LES;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_DGMENTER_DES:BOOL=$BUILD_DGMENTER_DES;$ZCFD_EXTRA_ARGS"
+
 #echo $ZCFD_EXTRA_ARGS
 
-ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DCMAKE_BUILD_TYPE:STRING=${BUILD_DEBUG};-DCUDA_HOST_COMPILER:STRING=`which g++`;-DCUDA_PROPAGATE_HOST_FLAGS:BOOL=OFF;$ZCFD_EXTRA_ARGS"
 
 # For release strip files
 if [ "${BUILD_DEBUG}" == "Release" ]; then
@@ -316,17 +359,24 @@ if [ "$BUILD_CUDA" == "true" ]; then
   if [ "${UNAME}" == "Darwin" ] ; then
     CUDA_COMPILER=`type -p /usr/local/cuda/bin/nvcc || true`
   fi
+
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfdcuda:BOOL=ON"
+  if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
+    ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
+  fi
 else
   CUDA_COMPILER=
 fi
-if [ -f "$CUDA_COMPILER" ]; then
-  ZCFD_PACKAGE_NAME="zCFD-cuda-$CPU_FLAG"
-  # build for fermi and kepler
-  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
-  ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
+
+if [ "${BUILD_CUDA_ONLY}" == "true" ]; then
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfd:BOOL=OFF"
 else
-  ZCFD_EXTRA_ARGS="-DBUILD_CUDA:BOOL=OFF;$ZCFD_EXTRA_ARGS"
+  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DENABLE_zcfd:BOOL=ON"
 fi
+
+# build for fermi and kepler
+ZCFD_EXTRA_ARGS="-DBUILD_ARCH_20:BOOL=ON;-DBUILD_ARCH_30:BOOL=ON;$ZCFD_EXTRA_ARGS"
+ZCFD_EXTRA_ARGS="-DBUILD_ARCH_35:BOOL=ON;-DBUILD_ARCH_50:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
 # Check for presence of Intel compiler
 INTEL_COMPILER=`type -p icc || true`
@@ -334,6 +384,7 @@ if [ -f "$INTEL_COMPILER" ]; then
   INTEL_VERSION=`icc -dumpversion`
   if [ "$BUILD_INTEL" == "true" ]; then
     ZCFD_PACKAGE_NAME="zCFD-icc-$CPU_FLAG"
+    CMAKE_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$CMAKE_EXTRA_ARGS"
     ZCFD_EXTRA_ARGS="-DINTEL_CC:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
     if [ "$BUILD_PHI" == "true" ]; then
@@ -399,16 +450,12 @@ if [ "${UNAME}" == "Darwin" ] ; then
   -DVTK_XDMF_USE_MPI:BOOL=ON;\
   -DVTK_USE_SYSTEM_HDF5:BOOL=ON;\
   -DXDMF_BUILD_MPI:BOOL=ON;\
-  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;"
+  -DPARAVIEW_DO_UNIX_STYLE_INSTALLS:BOOL=ON;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
   ZCFD_EXTRA_ARGS="-DDISABLE_LM:BOOL=ON;$ZCFD_EXTRA_ARGS"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
   fi
-  #if [ ! -f "$CUDA_COMPILER" ]; then
-  #  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-  #  ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
-  #fi
 elif [[ -n "$CRAYOS_VERSION" ]]; then
   #statements
   # For Linux
@@ -420,7 +467,7 @@ elif [[ -n "$CRAYOS_VERSION" ]]; then
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=${CRAYPE_DIR}/bin/cc \
                     -DCMAKE_CXX_COMPILER=${CRAYPE_DIR}/bin/CC \
@@ -444,38 +491,29 @@ else
                 -DOSMESA_LIBRARY:FILEPATH=${PREFIX}/lib/libOSMesa.so;\
                 -DOPENGL_INCLUDE_DIR:PATH=${PREFIX}/include;\
                 -DOPENGL_gl_LIBRARY:FILEPATH="";-DOPENGL_glu_LIBRARY:FILEPATH=${PREFIX}/lib/libGLU.so;\
-                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF"
+                -DOPENGL_xmesa_INCLUDE_DIR:PATH="";-DVTK_USE_X:BOOL=OFF;-DPARAVIEW_BUILD_QT_GUI:BOOL=OFF"
 
   if [ "${MAKE_FAST}" == "true" ] ; then
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DZCFD_FAST:BOOL=ON"
     ZCFD_EXTRA_ARGS="-DBUILD_FAST:BOOL=ON;$ZCFD_EXTRA_ARGS"
   fi
 
-  #if [ ! -f "$CUDA_COMPILER" ]; then
-#  CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++"
-  #ZCFD_EXTRA_ARGS="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++;$ZCFD_EXTRA_ARGS"
-  #fi
 fi
 
 $CMAKE_EXE  -DCMAKE_BUILD_TYPE:STRING:=${BUILD_DEBUG} \
-      -DENABLE_boost:BOOL=ON \
-      -DENABLE_lapack:BOOL=ON \
-      -DENABLE_ffmpeg:BOOL=ON \
-      -DENABLE_hdf5:BOOL=ON \
-      -DENABLE_mpi:BOOL=ON \
-      -DENABLE_osmesa:BOOL=ON \
-      -DENABLE_python:BOOL=ON \
-      -DENABLE_paraviewsdk:BOOL=ON\
-      -DENABLE_paraview:BOOL=ON \
       -DPV_EXTRA_CMAKE_ARGS:STRING="${PV_EXTRA_ARGS}" \
       -DCPACK_PACKAGE_NAME:STRING=${ZCFD_PACKAGE_NAME} \
-      -DENABLE_zcfd:BOOL=ON \
+      -DENABLE_ffmpeg:BOOL=ON \
+      -DENABLE_osmesa:BOOL=ON \
       -DZCFD_EXTRA_CMAKE_ARGS:STRING="${ZCFD_EXTRA_ARGS}" \
       ${CMAKE_EXTRA_ARGS} \
       ../zCFDSuperBuild
 
-#make -j1 VERBOSE=${verbose} $MAKE_TARGET
-make -j1 $MAKE_TARGET
+if [ "${verbose}" == "true" ] ; then
+  make -j1 VERBOSE=true $MAKE_TARGET
+else
+  make -j1 $MAKE_TARGET
+fi
 
 if [ "${MAKE_FAST}" == "false" ] ; then
 
@@ -491,8 +529,14 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   ../install/bin/python setup.py install
   popd
 
+  # Upgrade pip
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org pip
+
   # Install yolk
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org yolk
+
+  # Install gitterpy
+  install/bin/python install/bin/pip install --upgrade https://github.com/graycatlabs/gitterpy/zipball/master
 
   # Install mpi4py
   #./install/bin/python setup.py build --mpicc=cc --mpicxx=CC --mpif95=ftn
@@ -503,10 +547,17 @@ if [ "${MAKE_FAST}" == "false" ] ; then
 #export FC=ftn
 
   # Install requirements
-  install/bin/python install/bin/pip install --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  # Force reinstall
+  install/bin/python install/bin/pip install --upgrade --no-deps --force-reinstall --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/requirements.txt
+  # Install notebook
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org -r ../zCFDSuperBuild/notebook-requirements.txt
+
+  install/bin/python install/bin/pip install --upgrade --index-url=http://pypi.python.org/simple/ --trusted-host pypi.python.org jupyter
+
   # If CUDA present install pycuda
   if [ -f "$CUDA_COMPILER" ]; then
-    install/bin/python install/bin/pip install pycuda==2014.1
+    install/bin/python install/bin/pip install pycuda
     #  Need to copy CUDA libraries into lib - this is permitted under the NVIDIA CUDA EULA
     cp -r "$( dirname "$CUDA_COMPILER" )"/../lib64/* install/lib
   fi
@@ -519,54 +570,55 @@ if [ "${MAKE_FAST}" == "false" ] ; then
     rm -f "${P}.tmp"
   done
 
+  # Function to install intel compiler redistributable
+  function install_intel2016
+  {
+    stub=$1
+    release=$2
+    mpi_redist=l_mpi-rt_p_5.1.3.223
+    if [ ! -f ${stub}.tgz ]; then
+      wget http://packages.zenotech.com/${stub}.tgz
+    fi
+    tar xf ${stub}.tgz
+    pushd ${stub}
+    ./install.sh --eula --install-path ../install/intel
+    popd
+    # Fix up as Intel has changed install path
+    rm -rf install/intel/compiler/lib/intel64
+    rm -rf install/intel/compiler
+    ln -sF compilers_and_libraries_${release}/linux/compiler install/intel/compiler
+    ln -sF intel64_lin install/intel/compiler/lib/intel64
+    mkdir -p install/intel/mkl/lib/intel64
+    cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl/lib/intel64 install/intel/mkl/lib/
+    if [ ! -f ${mpi_redist}.tgz ] ; then
+	wget http://packages.zenotech.com/${mpi_redist}.tgz 
+    fi
+    tar xf ${mpi_redist}.tgz
+    pushd ${mpi_redist}
+    cat << EOF > silent.cfg
+ACCEPT_EULA=accept
+CONTINUE_WITH_OPTIONAL_ERROR=yes
+PSET_INSTALL_DIR=$PWD/../install/intel
+CONTINUE_WITH_INSTALLDIR_OVERWRITE=no
+PSET_MODE=install
+PHONEHOME_SEND_USAGE_DATA=yes
+COMPONENTS=;intel-comp-l-all-vars__noarch;intel-mpi-rt-core__x86_64;intel-mpi-rt-psxe__x86_64;intel-psxe-common__noarch;intel-psxe-doc__noarch;intel-compxe-pset
+EOF
+    rm -f ${HOME}/intel/intel_sdp_products.db 
+    ./install.sh --silent silent.cfg --user-mode --ignore-cpu
+    popd
+  }
+
   if [ -f "$INTEL_COMPILER" ]; then
+    # https://software.intel.com/en-us/articles/intelr-composer-redistributable-libraries-by-version
     if [ "${UNAME}" != "Darwin" ] ; then
       # Always install the intel compiler redistributable libraries
-      if [ "$INTEL_VERSION" == "14.0.4" ]; then
-        wget http://packages.zenotech.com/l_ccompxe_2013_sp1.4.211_redist.tgz
-        tar xf l_ccompxe_2013_sp1.4.211_redist.tgz
-        pushd l_ccompxe_2013_sp1.4.211_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
-      elif [ "$INTEL_VERSION" == "15.0.0" ]; then
-        if [ ! -f l_ccompxe_2015.0.090_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_ccompxe_2015.0.090_redist.tgz
-        fi
-        tar xf l_ccompxe_2015.0.090_redist.tgz
-        pushd l_ccompxe_2015.0.090_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../mkl install/intel
-      elif [ "$INTEL_VERSION" == "16.0.1" ]; then
-        if [ ! -f l_comp_lib_2016.1.150_comp.cpp_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_comp_lib_2016.1.150_comp.cpp_redist.tgz
-        fi
-        tar xf l_comp_lib_2016.1.150_comp.cpp_redist.tgz
-        pushd l_comp_lib_2016.1.150_comp.cpp_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        # Fix up as Intel has changed install path
-        rm -rf install/intel/compiler/lib/intel64
-        rm -rf install/intel/compiler
-        ln -sF compilers_and_libraries_2016.1.150/linux/compiler install/intel/compiler
-        ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
+      if [ "$INTEL_VERSION" == "16.0.1" ]; then
+        install_intel2016 l_comp_lib_2016.1.150_comp.cpp_redist 2016.1.150
       elif [ "$INTEL_VERSION" == "16.0.2" ]; then
-        if [ ! -f l_comp_lib_2016.2.181_comp.cpp_redist.tgz ]; then
-          wget http://packages.zenotech.com/l_comp_lib_2016.2.181_comp.cpp_redist.tgz
-        fi
-        tar xf l_comp_lib_2016.2.181_comp.cpp_redist.tgz
-        pushd l_comp_lib_2016.2.181_comp.cpp_redist
-        ./install.sh --eula --install-path ../install/intel
-        popd
-        # Fix up as Intel has changed install path
-        rm -rf install/intel/compiler/lib/intel64
-        rm -rf install/intel/compiler
-        ln -sF compilers_and_libraries_2016.2.181/linux/compiler install/intel/compiler
-        ln -sF intel64_lin install/intel/compiler/lib/intel64
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mkl install/intel
-        cp -rfL "$( dirname "$INTEL_COMPILER" )"/../../mpi install/intel
+        install_intel2016 l_comp_lib_2016.2.181_comp.cpp_redist 2016.2.181
+      elif [ "$INTEL_VERSION" == "16.0.3" ]; then
+        install_intel2016 l_comp_lib_2016.3.210_comp.cpp_redist 2016.3.210
       else
         echo "Intel Compiler Version not recognised - missing redistributable library"
       fi
@@ -576,15 +628,8 @@ if [ "${MAKE_FAST}" == "false" ] ; then
   # Create empty directory as CPACK expects a directory
   mkdir -p install/intel
 
-  if [ "${UNAME}" != "Darwin" ] ; then
-    set +e
-    # For gcc compile need to copy libgomp.so
-    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgomp* install/lib
-    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libquadmath* install/lib
-    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libgfortran* install/lib
-    cp -rf "$( dirname "$GCC_COMPILER" )"/../lib64/libstdc++* install/lib
-    set -e
-  fi
+  # Create empty directory as CPACK expects a directory
+  mkdir -p install/lic
 
   CPACK_EXE=`type -p cpack || true`
   if [ ! -f "$CPACK_EXE" ]; then

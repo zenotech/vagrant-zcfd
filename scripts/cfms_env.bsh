@@ -1,0 +1,4 @@
+#!/bin/bash
+
+module load gcc/gcc-4.9.2 cuda/cuda7.5
+source /opt/intel/compilers_and_libraries_2016.1.150/linux/bin/compilervars.sh intel64
