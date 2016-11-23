@@ -14,6 +14,16 @@ if [ "$SCRIPT_NAME" == "screen_build_cfms.bsh" ]; then
   screen -S zbuild -p 1 -X stuff $'module load gcc/gcc-4.9.2 cuda/cuda7.5\r'
   screen -S zbuild -p 1 -X stuff $'source /opt/intel/compilers_and_libraries_2016.1.150/linux/bin/compilervars.sh intel64\r'
 fi
+if [ "$SCRIPT_NAME" == "screen_build_cfms2.bsh" ]; then
+  echo "Building of CFMS 2"
+  screen -S zbuild -p 1 -X stuff $'export PATH=/gpfs/apps/compilers/gcc-4.9.3/bin:$PATH\r'
+  screen -S zbuild -p 1 -X stuff $'export LD_LIBRARY_PATH=/gpfs/apps/compilers/gcc-4.9.3/lib64:$LD_LIBRARY_PATH\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/vtune_amplifier_xe/amplxe-vars.sh\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/advisor_xe/advixe-vars.sh\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/itac_latest/bin/itacvars.sh\r'
+  screen -S zbuild -p 1 -X stuff $'source /opt/intel/itac_latest/bin/mps.sh --vtune\r'
+fi
 screen -S zbuild -p 1 -X stuff $'eval "$(ssh-agent -s)"\r'
 screen -S zbuild -p 1 -X stuff $'ssh-add ~/.ssh/zdeploy_rsa\r'
 screen -S zbuild -p 1 -X stuff $'./install_zcfd.bsh '"$*"$'\r'
